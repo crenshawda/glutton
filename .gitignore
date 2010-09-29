@@ -1,0 +1,19 @@
+# Emacs backup files
+*~
+*/*~
+
+# Emacs filelocks
+.#*
+*/.#*
+
+# Emacs-- are these still filelocks?
+*#
+*/*#
+
+# Mac hidden directory service files
+.DS_Store
+*/.DS_Store
+
+# Project lib and class compilation directories
+lib/
+classes/
