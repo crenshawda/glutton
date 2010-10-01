@@ -1,9 +1,9 @@
 (ns glutton.glutton
-  (:use [clojure.contrib.seq-utils :only [indexed]]))
+  (:use [clojure.contrib.seq-utils :only [indexed]]
+        [clojure.contrib.def :only [defnk]]))
 
 (def breaks #{:K :R :. nil}) ; Consider Proline
 (def starts #{:M})
-(def max-breaks 2)
 
 (defn- start? [aa] (contains? starts aa))
 (defn- break? [aa] (contains? breaks aa))
@@ -18,17 +18,22 @@
                     (start? current-aa) ;obviously
                     (= :M prev-aa))     ;N-terminal methionines often get removed
                                         ; (TODO: does this happen for all organisms?)
-                     [{:sequence [current-aa] :breaks 0 :nucleotide-start (* 3 loc)}])))
+              [{:sequence [current-aa] :breaks 0 :nucleotide-start (* 3 loc)}])))
 
 (defn- digest*
-  [[[loc [prev-aa current-aa]] & other-aas :as aas] candidates]
-  (let [new-candidates (process candidates current-aa prev-aa loc)]
+  [[[loc [prev-aa current-aa]] & other-aas :as aas] candidates config]
+  (let [new-candidates (process candidates current-aa prev-aa loc)
+        {:keys [missed-cleavages]} config]
     (if (seq other-aas)
       (if-not (break? current-aa)
-        (recur other-aas new-candidates)
-        (lazy-cat new-candidates (digest* other-aas (remove #(> (:breaks %) max-breaks)
-                                                        new-candidates))))
+        (recur other-aas new-candidates config)
+        (bound-seq (lazy-cat new-candidates (digest* other-aas
+                                                     (remove #(> (:breaks %) missed-cleavages)
+                                                             new-candidates)
+                                                     config))))
       new-candidates)))
 
-(defn digest [aas]
-  (digest* (indexed (partition 2 1 (cons nil aas))) []))
+(defnk digest [aas :missed-cleavages 2]
+  (digest* (indexed (partition 2 1 (cons nil aas)))
+           []
+           {:missed-cleavages missed-cleavages}))
