@@ -4,4 +4,6 @@
 		 [org.clojure/clojure-contrib "1.2.0"]
 		 [com.stuartsierra/lazytest "1.0.0-SNAPSHOT"]]
   :dev-dependencies [[swank-clojure "1.2.1"]]
-  :repositories {"stuartsierra.com" "http://stuartsierra.com/m2snapshots"})
+  :repositories {"stuartsierra.com" "http://stuartsierra.com/m2snapshots"}
+  :jvm-opts ["-server"
+             "-Xmx1g"])
