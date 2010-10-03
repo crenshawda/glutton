@@ -1,6 +1,8 @@
 (ns glutton.glutton
   (:use [clojure.contrib.seq-utils :only [indexed]]))
 
+(defrecord Peptide [sequence breaks nucleotide-start])
+
 (def breaks #{:K :R :. nil}) ; Consider Proline
 (def starts #{:M})
 (def max-breaks 2)
@@ -18,7 +20,7 @@
                     (start? current-aa) ;obviously
                     (= :M prev-aa))     ;N-terminal methionines often get removed
                                         ; (TODO: does this happen for all organisms?)
-                     [{:sequence [current-aa] :breaks 0 :nucleotide-start (* 3 loc)}])))
+              [(Peptide. [current-aa] 0 (* 3 loc))])))
 
 (defn- digest*
   [[[loc [prev-aa current-aa]] & other-aas :as aas] candidates]
