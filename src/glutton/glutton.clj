@@ -2,6 +2,8 @@
   (:use [clojure.contrib.seq-utils :only [indexed]]
         [clojure.contrib.def :only [defnk]]))
 
+(defrecord Peptide [sequence breaks nucleotide-start])
+
 (defn- start? [starts aa] (contains? starts aa))
 (defn- break? [breaks aa] (contains? breaks aa))
 
@@ -15,7 +17,7 @@
                     (start? start-with current-aa)  ;obviously
                     (= :M prev-aa))                 ;N-terminal methionines often get removed
                                                     ; (TODO: does this happen for all organisms?)
-              [{:sequence [current-aa] :breaks 0 :nucleotide-start (* 3 loc)}])))
+              [(Peptide. [current-aa] 0 (* 3 loc))])))
 
 (defn- digest*
   [[[loc [prev-aa current-aa]] & other-aas :as aas] candidates config]
@@ -44,7 +46,7 @@
    Defaults to [:M].  Note that the start of the digested peptide sequence always begins a new candidate,
    whether it is in this list or not.
 
-   Returns a lazy sequence of peptide candidates."
+   Returns a lazy sequence of Peptides."
   [aas :missed-cleavages 2 :break-after [:K :R] :start-with [:M]]
   (let [break-after (set (conj break-after nil))
         start-with (set start-with)]
