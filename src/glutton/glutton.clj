@@ -2,19 +2,18 @@
   (:use [clojure.contrib.seq-utils :only [indexed]]
         [clojure.contrib.def :only [defnk]]))
 
-(def breaks #{:K :R :. nil}) ; Consider Proline
 (def starts #{:M})
 
 (defn- start? [aa] (contains? starts aa))
-(defn- break? [aa] (contains? breaks aa))
+(defn- break? [breaks aa] (contains? breaks aa))
 
-(defn- process [candidates current-aa prev-aa loc]
+(defn- process [candidates current-aa prev-aa loc {:keys [break-after]}]
   (lazy-cat (for [c candidates]
               (let [c (update-in c [:sequence] conj current-aa)]
-                (if (break? current-aa)
+                (if (break? break-after current-aa)
                   (update-in c [:breaks] inc)
                   c)))
-            (if (or (break? prev-aa)    ;after you cleave, you need to begin a new one
+            (if (or (break? break-after prev-aa)    ;after you cleave, you need to begin a new one
                     (start? current-aa) ;obviously
                     (= :M prev-aa))     ;N-terminal methionines often get removed
                                         ; (TODO: does this happen for all organisms?)
@@ -22,10 +21,10 @@
 
 (defn- digest*
   [[[loc [prev-aa current-aa]] & other-aas :as aas] candidates config]
-  (let [new-candidates (process candidates current-aa prev-aa loc)
-        {:keys [missed-cleavages]} config]
+  (let [new-candidates (process candidates current-aa prev-aa loc config)
+        {:keys [missed-cleavages break-after]} config]
     (if (seq other-aas)
-      (if-not (break? current-aa)
+      (if-not (break? break-after current-aa)
         (recur other-aas new-candidates config)
         (lazy-cat new-candidates (digest* other-aas
                                           (remove #(> (:breaks %) missed-cleavages)
@@ -33,7 +32,9 @@
                                           config)))
       new-candidates)))
 
-(defnk digest [aas :missed-cleavages 2]
-  (digest* (indexed (partition 2 1 (cons nil aas)))
-           []
-           {:missed-cleavages missed-cleavages}))
+(defnk digest [aas :missed-cleavages 2 :break-after [:K :R]]
+  (let [break-after (set (conj break-after nil))]
+    (digest* (indexed (partition 2 1 (cons nil aas)))
+             []
+             {:missed-cleavages missed-cleavages
+              :break-after break-after})))
