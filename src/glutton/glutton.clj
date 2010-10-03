@@ -27,10 +27,10 @@
     (if (seq other-aas)
       (if-not (break? current-aa)
         (recur other-aas new-candidates config)
-        (bound-seq (lazy-cat new-candidates (digest* other-aas
-                                                     (remove #(> (:breaks %) missed-cleavages)
-                                                             new-candidates)
-                                                     config))))
+        (lazy-cat new-candidates (digest* other-aas
+                                          (remove #(> (:breaks %) missed-cleavages)
+                                                  new-candidates)
+                                          config)))
       new-candidates)))
 
 (defnk digest [aas :missed-cleavages 2]
