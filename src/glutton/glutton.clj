@@ -30,7 +30,22 @@
                                           config)))
       new-candidates)))
 
-(defnk digest [aas :missed-cleavages 2 :break-after [:K :R] :start-with [:M]]
+(defnk digest
+  "Perform a synthetic enzymatic digest of a peptide sequence.
+
+   aas = sequence of amino acids, given as single-letter code keywords, e.g., [:G :L :Y :T: V].
+
+   Optional Keyword Parameters:
+   :missed-cleavages -> Maximum number of internal missed cleavage sites allowed for a candidate peptide.
+   Defaults to 2
+   :break-after      -> Amino acids that signal a break.  Candidate peptides will end with one of these
+   amino acids.  Defaults to [:K :R] (i.e., trypsin digestion).
+   :start-with       -> Amino acids that signal the start of a new candidate peptide.
+   Defaults to [:M].  Note that the start of the digested peptide sequence always begins a new candidate,
+   whether it is in this list or not.
+
+   Returns a lazy sequence of peptide candidates."
+  [aas :missed-cleavages 2 :break-after [:K :R] :start-with [:M]]
   (let [break-after (set (conj break-after nil))
         start-with (set start-with)]
     (digest* (indexed (partition 2 1 (cons nil aas)))
