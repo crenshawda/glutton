@@ -9,10 +9,11 @@
 (def breaks #{:K :R :. nil}) ; Consider Proline
 (def starts #{:M})
 (def max-breaks 2)
-
+(def mass-threshold 500) ; daltons
 
 (defn- start? [aa] (contains? starts aa))
 (defn- break? [aa] (contains? breaks aa))
+(defn- above-threshold [threshold candidates] (remove #(< (:mass %) threshold) candidates))
 
 (defn- process [candidates current-aa prev-aa loc]
   (lazy-cat (for [c candidates]
@@ -32,9 +33,10 @@
     (if (seq other-aas)
       (if-not (break? current-aa)
         (recur other-aas new-candidates)
-        (lazy-cat new-candidates (digest* other-aas (remove #(> (:breaks %) max-breaks)
+        (lazy-cat (above-threshold mass-threshold new-candidates)
+                  (digest* other-aas (remove #(> (:breaks %) max-breaks)
                                                         new-candidates))))
-      new-candidates)))
+      (above-threshold mass-threshold new-candidates))))
 
 (defn digest [aas]
   (digest* (indexed (partition 2 1 (cons nil aas))) []))
