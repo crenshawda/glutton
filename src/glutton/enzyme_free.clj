@@ -1,13 +1,6 @@
-(ns glutton.inchworm
+(ns glutton.enzyme-free
   (:use [clojure.contrib.seq-utils :only [indexed]])
   (:use [glutton [lexicon :as lex]]))
-
-;; (def mass-target 500)
-;; (def mass-tolerance 100)
-
-(defn- in-range? [mass target tolerance]
-  (and (>= mass (- target tolerance))
-       (<= mass (+ target tolerance))))
 
 (defn- aa-mass
   ([amino-acid]
@@ -31,17 +24,17 @@
 
 (defn- all-sub-peptides [[[position first-aa] & other-aas]]
   (if (seq? other-aas)
-    (lazy-cat [(reductions (fn [p [pos aa]] (extend-with p aa ))
-                           (create-peptide first-aa position) other-aas)]
+    (lazy-cat [(reductions (fn [p [pos aa]] (extend-with p aa))
+                           (create-peptide first-aa (* position 3)) other-aas)]
               (all-sub-peptides other-aas))
     [[(create-peptide first-aa position)]]))
 
-(defn- filtered-by [genome mass-target mass-tolerance]
+(defn digest
+  "Return all sub-peptides of a translation of a nucleotide sequence whose masses fall within
+  a specified tolerance of a target mass."
+  [genome mass-target mass-tolerance]
   (flatten
-   (remove nil?
-           (for [sub-peptides (all-sub-peptides (indexed genome))]
-             (let [partitions (partition-by #(in-range? (:mass %) mass-target mass-tolerance)
-                                            sub-peptides)]
-               (if (in-range? (:mass (first (first partitions))) mass-target mass-tolerance)
-                 (first partitions)
-                 (second partitions)))))))
+   (for [sub-peptides (all-sub-peptides (indexed genome))]
+     (take-while #(<= (:mass %) (+ mass-target mass-tolerance))
+                 (drop-while #(< (:mass %) (- mass-target mass-tolerance))
+                             sub-peptides)))))
