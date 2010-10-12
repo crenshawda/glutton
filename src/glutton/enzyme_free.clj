@@ -1,26 +1,11 @@
 (ns glutton.enzyme-free
-  (:use [clojure.contrib.seq-utils :only [indexed]])
-  (:use [glutton [lexicon :as lex]]))
-
-(defn- aa-mass
-  ([amino-acid]
-     (aa-mass amino-acid :monoisotopic-mass))
-  ([amino-acid mass-type]
-     (mass-type (lex/*amino-acid-dictionary* amino-acid))))
-
-(defprotocol Extend
-  "Makes stuff longer"
-  (extend-with [this item] "Adds item to a thing"))
-
-(defrecord Peptide [sequence nucleotide-start mass]
-  Extend
-  (extend-with [this aa]
-    (-> this
-        (update-in [:sequence] conj aa)
-        (update-in [:mass] + (aa-mass aa)))))
+  (:use [clojure.contrib.seq-utils :only [indexed]]
+        [glutton [peptide-record]])
+  (:import [glutton.peptide-record Peptide]))
 
 (defn create-peptide [aa position]
-  (Peptide. [aa] position (aa-mass aa)))
+  "Constructor creates peptide with 0 breaks, as they aren't important in this algorithm"
+  (Peptide. [aa] position (aa-mass aa) 0))
 
 (defn- all-sub-peptides [[[position first-aa] & other-aas]]
   (if (seq? other-aas)
