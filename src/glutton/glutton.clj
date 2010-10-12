@@ -1,31 +1,30 @@
 (ns glutton.glutton
-  (:use [clojure.contrib.seq-utils :only [indexed]])
-  (:require (glutton [lexicon :as lex])))
+  (:use [clojure.contrib.seq-utils :only [indexed]]
+        [glutton [peptide-record]])
+  (:import [glutton.peptide-record Peptide]))
 
-(defrecord Peptide [sequence breaks nucleotide-start mass])
+(defn create-peptide [aa position]
+  (Peptide. [aa] position 0 0))
 
 (def breaks #{:K :R :. nil}) ; Consider Proline
 (def starts #{:M})
 (def max-breaks 2)
-(def mass-type :monoisotopic-mass)
+
 
 (defn- start? [aa] (contains? starts aa))
 (defn- break? [aa] (contains? breaks aa))
 
-(defn- get-mass [mass-type amino-acid] (mass-type (lex/*amino-acid-dictionary* amino-acid)))
 (defn- process [candidates current-aa prev-aa loc]
   (lazy-cat (for [c candidates]
-              (let [c (-> c
-                          (update-in [:sequence] conj current-aa)
-                          (update-in [:mass] + (get-mass mass-type current-aa)))]
+              (let [c (extend-with c current-aa)]
                 (if (break? current-aa)
-                  (update-in c [:breaks] inc)
+                  (update-in c [:breaks] inc) ; Should this be a protocol as well?
                   c)))
             (if (or (break? prev-aa)    ;after you cleave, you need to begin a new one
                     (start? current-aa) ;obviously
                     (= :M prev-aa))     ;N-terminal methionines often get removed
                                         ; (TODO: does this happen for all organisms?)
-              [(Peptide. [current-aa] 0 (* 3 loc) 0)])))
+              [(create-peptide [current-aa] (* 3 loc))])))
 
 (defn- digest*
   [[[loc [prev-aa current-aa]] & other-aas :as aas] candidates]
