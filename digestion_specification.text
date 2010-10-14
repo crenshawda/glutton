@@ -1,0 +1,70 @@
+Synthetic Proteome Digestion Specification 1.0
+==============================================
+
+**DRAFT**
+
+Authors
+----------
+
+* Dennis Crenshaw
+* Christopher Maier
+* Brian Risk
+
+Terms
+-----
+
+**Start Signal**: codon signal which indicates the initiation of translation.  In the standard genetic code, this role is played by the *AUG* codon, which also encodes for the amino acid methionine.
+
+**Stop Signal**: codon signal indicating the termination of translation.  In the standard genetic code, three codons fulfill this role: *UAG* (amber), *UGA* (umber), and *UAA* (ochre).
+
+**Cleavage Site**: an amino acid which serve as cleavage targets for endopeptidases.  For example, the enzyme trypsin cleaves proteins on the C-terminal side of lysine (*K*) and arginine (*R*) amino acids.  Thus, *K* and *R* would serve as cleavage sites.
+
+**Break**: any member of the union of all stop signals and cleavage sites; anywhere a peptide can be terminated.
+
+Rules
+-----
+
+* Begin candidate peptides at the first codon of a nucleotide sequence, regardless of what amino acid it encodes.
+* New candidate peptides begin with each in-frame start signal encountered.
+* Non-methionine amino acids following a methionine initiate new candidate peptides. This accounts for the common N-terminal methionine truncation that occurs in many eukaryotic and archaean proteins (*ED. Others?*)
+* Any amino acid following a break signal begins a new candidate peptide (unless a new one was already started by virtue of it being encoded with a start signal).
+* Candidate peptides may continue being extended through some user-specifiable number of break signals.  This accounts for protease inefficiencies, and serves as a rudimentary simulation of stop-codon read-through.  Stop signals and cleavage sites both count equally toward this "missed break" count. 
+
+<table>
+<caption>When To Initate A New Peptide Candidate</caption>
+<thead>
+<tr>
+<th>Previous Amino Acid</th>
+<th>Current Amino Acid</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>nil</td>
+<td>first codon</td>
+</tr>
+<tr>
+<td>anything</td>
+<td>= start signal</td>
+</tr>
+<tr>
+<td>= break</td>
+<td>&ne; M</td>
+</tr>
+<tr>
+<td>= M</td>
+<td>&ne; M</td>
+</tr>
+
+</tbody>
+
+</table>
+
+Caveats
+-------
+
+Currently this specification does nothing to address what is "actually" a true translation initiation signal (i.e., we're not looking for Shine-Dalgarno sequences, Kozak sequences, etc.); if there's a start codon, we consider that as a potential peptide starting point.  It also does nothing to model sequence slippage, frameshifting or any of the other esoteric translational events that may happen; only stop-codon read-through is considered, and then only crudely.  Spliced peptides (those that cross exon splice sites) are also currently not dealt with.
+
+As currently worded, this specification generally assumes a human genome sequence with trypsin digestion.  We are in the process of generalizing to any nucleotide sequence and any protease.
+
+The goal is to assemble a list of remotely plausible peptides that may be generated from a genome sequence, in order to serve as a database for mass spectrometry searching algorithms.
