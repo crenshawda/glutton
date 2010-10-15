@@ -1,36 +1,50 @@
 (ns glutton.glutton
-  (:use [clojure.contrib.seq-utils :only [indexed]]
-        [clojure.contrib.def :only [defnk]]))
+  [:use
+   [clojure.contrib.def :only [defnk]]
+   [clojure.contrib.seq-utils :only [indexed]]
+   [glutton.peptide-record :only [Extend extend-with
+                                  initiate-peptide]]]
+  [:import
+   [glutton.peptide-record Peptide]])
 
-(defrecord Peptide [sequence breaks nucleotide-start])
+(defn- above-threshold
+  "Return only those peptides whose mass is greater than or equal to 'mass-threshold'"
+  [mass-threshold peptides]
+  (filter #(>= (:mass %)
+               mass-threshold)
+          peptides))
 
-(defn- start? [starts aa] (contains? starts aa))
-(defn- break? [breaks aa] (contains? breaks aa))
+(defn- start? [starts aa]
+  (contains? starts aa))
+
+(defn- break? [breaks aa]
+  (contains? breaks aa))
 
 (defn- process [candidates current-aa prev-aa loc {:keys [break-after start-with]}]
   (lazy-cat (for [c candidates]
-              (let [c (update-in c [:sequence] conj current-aa)]
+              (let [c (extend-with c current-aa)]
                 (if (break? break-after current-aa)
-                  (update-in c [:breaks] inc)
+                  (update-in c [:breaks] inc) ; Should this be a protocol as well?
                   c)))
             (if (or (break? break-after prev-aa)    ;after you cleave, you need to begin a new one
                     (start? start-with current-aa)  ;obviously
                     (= :M prev-aa))                 ;N-terminal methionines often get removed
                                                     ; (TODO: does this happen for all organisms?)
-              [(Peptide. [current-aa] 0 (* 3 loc))])))
+              [(initiate-peptide current-aa (* 3 loc))])))
 
 (defn- digest*
   [[[loc [prev-aa current-aa]] & other-aas :as aas] candidates config]
   (let [new-candidates (process candidates current-aa prev-aa loc config)
-        {:keys [missed-cleavages break-after]} config]
+        {:keys [missed-cleavages break-after mass-threshold]} config]
     (if (seq other-aas)
       (if-not (break? break-after current-aa)
         (recur other-aas new-candidates config)
-        (lazy-cat new-candidates (digest* other-aas
-                                          (remove #(> (:breaks %) missed-cleavages)
-                                                  new-candidates)
-                                          config)))
-      new-candidates)))
+        (lazy-cat (above-threshold mass-threshold new-candidates)
+                  (digest* other-aas (remove #(> (:breaks %)
+                                                 missed-cleavages)
+                                             new-candidates)
+                           config)))
+      (above-threshold mass-threshold new-candidates))))
 
 (defnk digest
   "Perform a synthetic enzymatic digest of a peptide sequence.
@@ -45,13 +59,17 @@
    :start-with       -> Amino acids that signal the start of a new candidate peptide.
    Defaults to [:M].  Note that the start of the digested peptide sequence always begins a new candidate,
    whether it is in this list or not.
+   :mass-threshold   -> All candidate peptides with mass lower than this should be removed.  Defaults to 500
+    daltons.
 
    Returns a lazy sequence of Peptides."
-  [aas :missed-cleavages 2 :break-after [:K :R] :start-with [:M]]
+  [aas :missed-cleavages 2 :break-after [:K :R] :start-with [:M] :mass-threshold 500]
   (let [break-after (set (conj break-after nil))
-        start-with (set start-with)]
+        start-with (set start-with)
+        config {:missed-cleavages missed-cleavages
+                :break-after break-after
+                :start-with start-with
+                :mass-threshold mass-threshold}]
     (digest* (indexed (partition 2 1 (cons nil aas)))
              []
-             {:missed-cleavages missed-cleavages
-              :break-after break-after
-              :start-with start-with})))
+             config)))
