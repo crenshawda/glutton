@@ -1,12 +1,6 @@
 (ns glutton.peptide-record
-  (:use [glutton [lexicon :as lex]]))
-
-; This needs to be in genomic-utils as a public multi-method
-(defn- aa-mass
-  ([amino-acid]
-     (aa-mass amino-acid :monoisotopic-mass))
-  ([amino-acid mass-type]
-     (mass-type (lex/*amino-acid-dictionary* amino-acid))))
+  (:use (glutton [lexicon :as lex]
+                 [genomic-utils :as gu])))
 
 (defprotocol Extend
   "Makes stuff longer"
@@ -17,7 +11,7 @@
   (extend-with [this aa]
     (-> this
         (update-in [:sequence] conj aa)
-        (update-in [:mass] + (aa-mass aa)))))
+        (update-in [:mass] + (gu/aa-mass aa)))))
 
 (defn initiate-peptide [aa position]
-  (Peptide. [aa] position (aa-mass aa) 0))
+  (Peptide. [aa] position (gu/aa-mass aa) 0))

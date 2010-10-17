@@ -59,3 +59,9 @@
 	      (parse-dna-string reverse-compliment-sequence)
 	      (parse-dna-string (drop 1 reverse-compliment-sequence))
 	      (parse-dna-string (drop 2 reverse-compliment-sequence))]}))
+
+(defn aa-mass
+  ([amino-acid]
+     (aa-mass amino-acid :monoisotopic-mass))
+  ([amino-acid mass-type]
+     (mass-type (lex/*amino-acid-dictionary* amino-acid))))
