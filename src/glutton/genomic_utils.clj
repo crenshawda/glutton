@@ -1,6 +1,5 @@
 (ns glutton.genomic-utils
-  (:require (glutton [lexicon :as lex]
-                     [glutton :as glt])
+  (:require (glutton [lexicon :as lex])
             (clojure.contrib [seq-utils :as su])))
 
 (defn parse-dna-string
@@ -40,11 +39,6 @@
   "Give this the list of the frames you want translated and it will process them"
   [frames]
   (pmap frame->amino-acids frames))
-
-(defn amino-acids->peptides
-  "Given amino-acid frames, returns peptide frames"
-  [aa-frames]
-  (pmap glt/digest aa-frames))
 
 ; I think this needs to be moved/refactored into file-utils
 (defn parse-fasta
