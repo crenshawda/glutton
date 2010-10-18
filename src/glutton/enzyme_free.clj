@@ -6,7 +6,7 @@
 (defn- all-sub-peptides [[[position first-aa] & other-aas]]
   (if (seq? other-aas)
     (lazy-cat [(reductions (fn [p [pos aa]] (extend-with p aa))
-                           (create-peptide first-aa (* position 3)) other-aas)]
+                           (initiate-peptide first-aa (* position 3)) other-aas)]
               (all-sub-peptides other-aas))
     [[(initiate-peptide first-aa position)]]))
 
