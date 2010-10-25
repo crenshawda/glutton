@@ -1,6 +1,5 @@
 (ns glutton.peptide-record
-  (:use (glutton [lexicon :as lex]
-                 [genomic-utils :as gu])))
+  (:use (glutton [genomic-utils :as gu])))
 
 (defprotocol Extend
   "Makes stuff longer"
