@@ -34,3 +34,24 @@
      (aa-mass amino-acid :monoisotopic-mass))
   ([amino-acid mass-type]
      (mass-type (lex/amino-acid-dictionary amino-acid))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; FASTA Utilities
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn parse-fasta
+  [header sequence]
+  (let [gseq (normalize-genomic-data sequence)
+        compliment-rgseq (compliment-base-pairs (reverse gseq))]
+    {:header header
+     ;; Reading Frame Indexes 0-2 Forward, 3-5 Reverse-compliment
+     ;; This seems duplicated... but how to combine these-- order is important, right?
+     :frames (concat
+              (for [n (range 3)] (to-amino-acids (parse-dna-string (drop n gseq))))
+              (for [n (range 3)] (to-amino-acids (parse-dna-string (drop n compliment-rgseq)))))}))
+
+(defn single-fasta
+  [file-str]
+  (for [fasta-seq (file/file->records file-str)]
+    (let [[head seq] fasta-seq]
+      (parse-fasta head seq))))
