@@ -1,6 +1,9 @@
 (ns glutton.genomic-utils
-  (:require [glutton [lexicon :as lex]]
-            [clojure.contrib [seq-utils :as su]]))
+  [:require
+   [glutton
+    [lexicon :as lex]
+    [file-utils :as file]]])
+
 (defn normalize-genomic-data
   "Normalizes a genomic sequence by making a single, upper-cased string"
   [genomic-seq]
@@ -15,40 +18,16 @@
      (keyword (apply str codon))))
 
 (defn compliment-base-pairs
-  "Compliments base pairs (ostensibly for reverse frame readings)"
+  "Compliments nucleotide base pairs (mostly for reverse frame readings)"
   [nucleotide-sequence]
     (replace lex/nucleotide-base-pair-dictionary nucleotide-sequence))
 
-(defn normalize-genomic-data
-  "Normalizes a genomic data to help ensure parser compatability"
-  [genomic-data-seq]
-  (let [g-data (apply str genomic-data-seq)]
-    (-> g-data
-        (.toUpperCase))))
-
-(defn frame->amino-acids
-  "Pass this a reading frame of codon keywords and it will translate it into amino acids"
-  [frame]
-  (replace lex/codon-translation-matrix frame))
-
-(defn translate-frames
-  "Give this the list of the frames you want translated and it will process them"
-  [frames]
-  (pmap frame->amino-acids frames))
-
-; I think this needs to be moved/refactored into file-utils
-(defn parse-fasta
-  "Give this a FASTA header and sequence and it'll parse it out into the important bits"
-  [header sequence]
-  (let [original-sequence (vec (normalize-genomic-data sequence))
-        reverse-compliment-sequence (compliment-base-pairs (rseq original-sequence))]
-    {:header header
-     :frames [(parse-dna-string original-sequence)  ; Reading Frame Indexes 0-2 Forward, 3-5 Reverse-compliment
-	      (parse-dna-string (drop 1 original-sequence))
-	      (parse-dna-string (drop 2 original-sequence))
-	      (parse-dna-string reverse-compliment-sequence)
-	      (parse-dna-string (drop 1 reverse-compliment-sequence))
-	      (parse-dna-string (drop 2 reverse-compliment-sequence))]}))
+(defn to-amino-acids
+  "Translates a nucleotide frame or a sequence of frame into amino-acids"
+  [frame-seq]
+  (if (seq? (first frame-seq))
+    (pmap to-amino-acids frame-seq)
+    (replace lex/codon-translation-matrix frame-seq)))
 
 (defn aa-mass
   ([amino-acid]
