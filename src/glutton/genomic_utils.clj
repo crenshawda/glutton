@@ -1,6 +1,12 @@
 (ns glutton.genomic-utils
   (:require [glutton [lexicon :as lex]]
             [clojure.contrib [seq-utils :as su]]))
+(defn normalize-genomic-data
+  "Normalizes a genomic sequence by making a single, upper-cased string"
+  [genomic-seq]
+  (->> genomic-seq
+      (apply str)
+      (.toUpperCase)))
 
 (defn parse-dna-string
   "This is an accessory method to help parse the necleotide sequence from a fasta file, returns a seq of codon keywords."
