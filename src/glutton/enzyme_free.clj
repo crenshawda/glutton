@@ -12,7 +12,7 @@
 
 (defn digest
   "Return all sub-peptides of a translation of a nucleotide sequence whose masses fall within
-  a specified tolerance of a target mass."
+  a target mass-tolerance."
   [genome mass-target mass-tolerance]
   (flatten
    (for [sub-peptides (all-sub-peptides (indexed genome))]
