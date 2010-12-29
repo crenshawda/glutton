@@ -15,7 +15,6 @@
   ([peptide-records filename]
      ;; Doesn't check to see if the file already exists before appending
      (with-open [w (writer filename :append true)]
-       (doseq [frame peptide-records]
-         (doseq [record frame]
-           (.write w
-                 (str (apply str (interpose "\t" (vals record))) "\n")))))))
+       (doseq [record peptide-records]
+         (.write w
+                 (str (apply str (interpose "\t" (vals record))) "\n"))))))

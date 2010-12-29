@@ -8,15 +8,14 @@
              [genomic-utils :as gu]
              [file-utils :as file]]])
 
-;; to-amino-acids should be done after digestion as an output option?
 (defn peptides-from-fasta
-  "Given a FASTA file-str, this generates peptides from the genome sequence"
+  "Given a FASTA file-str, this generates peptides from the genome sequence(s)"
   [file-str]
-  (pmap glt/digest
-        (gu/to-amino-acids
-         (:frames
-          ;; This first is fragile-- it should be able to comprehend better than this!
-          (first (gu/single-fasta file-str))))))
+  (flatten ;; Bucket of peptides, no need to keep the seq/frame structure
+   (for [seq (gu/single-fasta file-str)]
+     ;; Alternatively: (pmap glt/digest (:frames seq))
+     (for [frame (:frames seq)]
+       (glt/digest frame)))))
 
 (defn peptide-count
   "Given a FASTA file-str, this counts peptides generated from the genome sequence"
