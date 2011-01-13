@@ -12,12 +12,6 @@
   "Given a FASTA file-str, this generates peptides from the genome sequence(s)"
   [file-str]
   (flatten ;; Bucket of peptides, no need to keep the seq/frame structure
-   (for [seq (gu/single-fasta file-str)]
-     ;; Alternatively: (pmap glt/digest (:frames seq))
-     (for [frame (:frames seq)]
-       (glt/digest frame)))))
-
-(defn peptide-count
-  "Given a FASTA file-str, this counts peptides generated from the genome sequence"
-  [file-str]
-  (reduce + 0 (map count (peptides-from-fasta file-str))))
+   (for [seq (gu/single-fasta file-str)
+         frame (:frames seq)]
+     (glt/digest frame))))

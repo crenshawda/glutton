@@ -1,29 +1,23 @@
 (ns glutton.genomic-utils
   [:require
+   [clojure.string :as string]
    [glutton
     [lexicon :as lex]
     [file-utils :as file]]])
 
-(defn normalize-genomic-data
-  "Normalizes a genomic sequence by making a single, upper-cased string"
-  [genomic-seq]
-  (->> genomic-seq
-      (apply str)
-      (.toUpperCase)))
-
-(defn parse-dna-string
-  "This is an accessory method to help parse the necleotide sequence from a fasta file, returns a seq of codon keywords."
+(defn- parse-dna-string
+  "This is an accessory method to help parse the nucleotide sequence from a fasta file, returns a seq of codon keywords."
   [nucleotide-sequence]
   (for [codon (partition 3 nucleotide-sequence)]
-     (keyword (apply str codon))))
+    (keyword (string/upper-case (string/join codon)))))
 
-(defn compliment-base-pairs
+(defn- compliment-base-pairs
   "Compliments nucleotide base pairs (mostly for reverse frame readings)"
   [nucleotide-sequence]
     (replace lex/nucleotide-base-pair-dictionary nucleotide-sequence))
 
-(defn to-amino-acids
-  "Translates a nucleotide frame or a sequence of frame into amino-acids"
+(defn- to-amino-acids
+  "Translates a nucleotide frame or sequence of frames into amino-acids"
   [frame-seq]
   (if (seq? (first frame-seq))
     (pmap to-amino-acids frame-seq)
@@ -39,19 +33,20 @@
 ;; FASTA Utilities
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn parse-fasta
+(defn- parse-fasta
   [header sequence]
-  (let [gseq (normalize-genomic-data sequence)
-        compliment-rgseq (compliment-base-pairs (reverse gseq))]
+  (let [sequence (string/join sequence)
+        ;; reverse isn't lazy! is this killing me?
+        reverse-compliment-sequence (compliment-base-pairs (reverse sequence))
+        ->aas #(for [n (range 3)]
+                 (to-amino-acids (parse-dna-string (drop n %))))]
     {:header header
      ;; Reading Frame Indexes 0-2 Forward, 3-5 Reverse-compliment
-     ;; This seems duplicated... but how to combine these-- order is important, right?
-     :frames (concat
-              (for [n (range 3)] (to-amino-acids (parse-dna-string (drop n gseq))))
-              (for [n (range 3)] (to-amino-acids (parse-dna-string (drop n compliment-rgseq)))))}))
+     :frames (lazy-cat (->aas sequence)
+                       (->aas reverse-compliment-sequence))}))
 
 (defn single-fasta
   [file-str]
   (for [fasta-seq (file/file->records file-str)]
-    (let [[head seq] fasta-seq]
-      (parse-fasta head seq))))
+    (let [[header sequence] fasta-seq]
+      (parse-fasta header sequence))))

@@ -30,7 +30,7 @@
                     (start? start-with current-aa)  ;obviously
                     (= :M prev-aa))                 ;N-terminal methionines often get removed
                                                     ; (TODO: does this happen for all organisms?)
-              [(initiate-peptide current-aa (* 3 loc))])))
+              [(initiate-peptide current-aa (* 3 loc) "" "glutton")])))
 
 (defn- digest*
   [[[loc [prev-aa current-aa]] & other-aas :as aas] candidates config]
