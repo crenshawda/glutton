@@ -1,11 +1,7 @@
 (ns glutton.glutton
-  [:use
-   [clojure.contrib.def :only [defnk]]
-   [clojure.contrib.seq-utils :only [indexed]]
-   [glutton.peptide-record :only [Extend extend-with
-                                  initiate-peptide]]]
-  [:import
-   [glutton.peptide-record Peptide]])
+  ( :use (clojure.contrib [def :only [defnk]]
+                          [seq-utils :only [indexed]])
+         (glutton [peptide-record :only [extend-with initiate-peptide]])))
 
 (defn- above-threshold
   "Return only those peptides whose mass is greater than or equal to 'mass-threshold'"
@@ -20,30 +16,42 @@
 (defn- break? [breaks aa]
   (contains? breaks aa))
 
+(defn- stop-codon? [aa]
+  (= aa :.))
+
 (defn- process [candidates current-aa prev-aa loc {:keys [break-after start-with]}]
   (lazy-cat (for [c candidates]
               (let [c (extend-with c current-aa)]
                 (if (break? break-after current-aa)
                   (update-in c [:breaks] inc) ; Should this be a protocol as well?
                   c)))
-            (if (or (break? break-after prev-aa)    ;after you cleave, you need to begin a new one
-                    (start? start-with current-aa)  ;obviously
-                    (= :M prev-aa))                 ;N-terminal methionines often get removed
-                                                    ; (TODO: does this happen for all organisms?)
-              [(initiate-peptide current-aa (* 3 loc) "" "glutton")])))
+            (if (or (break? break-after prev-aa) ;after you cleave, you need to begin a new one
+                    (start? start-with current-aa) ;obviously
+                    (= :M prev-aa) ;N-terminal methionines often get removed                                         ; (TODO: does this happen for all organisms?)
+                    (stop-codon? prev-aa))
+              [(initiate-peptide current-aa (* 3 loc)
+                                 (if (break? break-after current-aa)
+                                   1
+                                   0)
+                                 "" "glutton")])))
 
 (defn- digest*
   [[[loc [prev-aa current-aa]] & other-aas :as aas] candidates config]
   (let [new-candidates (process candidates current-aa prev-aa loc config)
         {:keys [missed-cleavages break-after mass-threshold]} config]
     (if (seq other-aas)
-      (if-not (break? break-after current-aa)
-        (recur other-aas new-candidates config)
-        (lazy-cat (above-threshold mass-threshold new-candidates)
-                  (digest* other-aas (remove #(> (:breaks %)
-                                                 missed-cleavages)
-                                             new-candidates)
-                           config)))
+      (cond (break? break-after current-aa)  (lazy-cat (above-threshold mass-threshold new-candidates)
+                                                       (digest* other-aas
+                                                                (remove #(> (:breaks %)
+                                                                            missed-cleavages)
+                                                                        new-candidates)
+                                                                config))
+            (and (stop-codon? current-aa)
+                 (break? break-after prev-aa)) (lazy-cat [] (digest* other-aas [] config))
+            (stop-codon? current-aa) (lazy-cat (above-threshold mass-threshold new-candidates)
+                                               (digest* other-aas [] config))
+
+            :default (recur other-aas new-candidates config))
       (above-threshold mass-threshold new-candidates))))
 
 (defnk digest

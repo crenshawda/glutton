@@ -9,7 +9,7 @@
       :TTA :L :TTG :L :CTT :L :CTC :L :CTA :L :CTG :L
       :CGT :R :CGC :R :CGA :R :CGG :R :AGA :R :AGG :R
       :AAA :K :AAG :K
-      :AAT :N :AAC :N      
+      :AAT :N :AAC :N
       :GAT :D :GAC :D
       :TTT :F :TTC :F
       :TGT :C :TGC :C
@@ -23,19 +23,19 @@
       :CAT :H :CAC :H
       :TAT :Y :TAC :Y
       :ATT :I :ATC :I :ATA :I
-      :GTT :V :GTC :V :GTA :V :GTG :V}) 
+      :GTT :V :GTC :V :GTA :V :GTG :V})
 
 ; These are characters for convenience of direct comparison
 (def nucleotide-base-pair-dictionary
      {\A \T ; 3 intermolecular H bonds
-      \T \A      
+      \T \A
       \G \C ; 2 intermolecular H bonds
       \C \G})
 
 (def amino-acid-dictionary
      {:. {:average-mass 0, :monoisotopic-mass 0}
       :A {:average-mass 71.0788, :monoisotopic-mass 71.03711}
-      :C {:average-mass 103.1448, :monoisotopic-mass 161.01466}
+      :C {:average-mass 103.1448, :monoisotopic-mass 103.00919}
       :D {:average-mass 115.0886, :monoisotopic-mass 115.02694}
       :E {:average-mass 129.1155, :monoisotopic-mass 129.04259}
       :F {:average-mass 147.1766, :monoisotopic-mass 147.06841}
@@ -58,13 +58,13 @@
 ; Ref: http://en.wikipedia.org/wiki/CHON
 (def chon-constants
      {:carbon {:monoisotopic-mass 12.00000000
-	       :average-mass 12.01073590}
+               :average-mass 12.01073590}
       :hydrogen {:monoisotopic-mass 1.00782504
-		 :average-mass 1.00794076}
+                 :average-mass 1.00794076}
       :oxygen {:monoisitopic-mass 15.99491463
-	       :average-mass 15.99940494}
+               :average-mass 15.99940494}
       :nitrogen {:monoisotopic-mass 14.00307400
-		 :average-mass 14.00674309}})
+                 :average-mass 14.00674309}})
 
 ; NOTE: Brian Risk- TODO this .98 is from my observations of theoretical
 ; and measured peptide mass differences.  check validity.

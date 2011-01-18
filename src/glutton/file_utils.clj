@@ -1,7 +1,6 @@
 (ns glutton.file-utils
-  [:use
-   [clojure.contrib.duck-streams :only [write-lines]]
-   [clojure.java.io :only [writer reader]]])
+  (:use (clojure.contrib [duck-streams :only [write-lines]])
+        (clojure.java [io :only [writer reader]])))
 
 ;; THIS: Is stolen from `encode-mongo.import.varsplice
 (defn file->records [file]
