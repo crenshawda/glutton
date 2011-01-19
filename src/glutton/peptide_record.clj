@@ -6,7 +6,6 @@
   (extend-with [this item] "Adds item to a thing"))
 
 
-
 (defrecord Peptide [sequence nucleotide-start mass breaks source digestion]
   Extend
   (extend-with [this aa]
@@ -15,8 +14,8 @@
         (update-in [:mass] + (aa-mass aa)))))
 
 (defn initiate-peptide
-  ([aa position]
-     (initiate-peptide [aa] position "" ""))
+  ([aa position source digestion]
+     (initiate-peptide aa position "n/a" source digestion))
   ([aa position breaks source digestion]
      (Peptide. [aa] position
                (+ (aa-mass aa)

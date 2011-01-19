@@ -19,7 +19,7 @@
 (defn- stop-codon? [aa]
   (= aa :.))
 
-(defn- process [candidates current-aa prev-aa loc {:keys [break-after start-with]}]
+(defn- process [candidates current-aa prev-aa loc {:keys [break-after start-with source digestion]}]
   (lazy-cat (for [c candidates]
               (let [c (extend-with c current-aa)]
                 (if (break? break-after current-aa)
@@ -33,7 +33,7 @@
                                  (if (break? break-after current-aa)
                                    1
                                    0)
-                                 "" "glutton")])))
+                                 source digestion)])))
 
 (defn- digest*
   [[[loc [prev-aa current-aa]] & other-aas :as aas] candidates config]
@@ -69,15 +69,18 @@
    whether it is in this list or not.
    :mass-threshold   -> All candidate peptides with mass lower than this should be removed.  Defaults to 500
     daltons.
+   :source         -> Organism that the genome came from.  Defaults to unknown.
 
    Returns a lazy sequence of Peptides."
-  [aas :missed-cleavages 2 :break-after [:K :R] :start-with [:M] :mass-threshold 500]
+  [aas :missed-cleavages 2 :break-after [:K :R] :start-with [:M] :mass-threshold 500 :source ""]
   (let [break-after (set (conj break-after nil))
         start-with (set start-with)
         config {:missed-cleavages missed-cleavages
                 :break-after break-after
                 :start-with start-with
-                :mass-threshold mass-threshold}]
+                :mass-threshold mass-threshold
+                :source source
+                :digestion "glutton"}]
     (digest* (indexed (partition 2 1 (cons nil aas)))
              []
              config)))
