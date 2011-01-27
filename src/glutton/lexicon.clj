@@ -25,13 +25,6 @@
       :ATT :I :ATC :I :ATA :I
       :GTT :V :GTC :V :GTA :V :GTG :V})
 
-; These are characters for convenience of direct comparison
-(def nucleotide-base-pair-dictionary
-     {\A \T ; 3 intermolecular H bonds
-      \T \A
-      \G \C ; 2 intermolecular H bonds
-      \C \G})
-
 (def amino-acid-dictionary
      {:. {:average-mass 0, :monoisotopic-mass 0}
       :A {:average-mass 71.0788, :monoisotopic-mass 71.03711}

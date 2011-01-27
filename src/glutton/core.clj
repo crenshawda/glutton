@@ -1,19 +1,17 @@
 ; Clojure implementation of the Giddings Lab GFS software
 ; Authors: Dennis Crenshaw, Chris Maier, Brian Risk
-; Date: January 19, 2011
+; Date: January 27, 2011
 
 (ns glutton.core
-  (:use (clojure.contrib [duck-streams :only [write-lines]])
-        (glutton [glutton :only [digest]]
-                 ;; [enzyme-free :only [digest]]
-                 [genomic-utils :only [single-fasta aa-mass water-mass]])))
+  (:use (glutton [genomic-utils :only [fasta->clj
+                                       nucleotides->frames]]
+                 [glutton :only [digest]])))
 
-(defn peptides-from-fasta
+(defn ->peptides
   "Given a FASTA file-str and an optional organism source (eg. ecoli), this generates peptides from the genome sequence(s)"
   ([file-str]
-     (peptides-from-fasta file-str "unknown"))
+     (->peptides file-str "unknown"))
   ([file-str source]
      (flatten ;; Bucket of peptides, no need to keep the seq/frame structure
-      (for [seq (single-fasta file-str)
-            frame (:frames seq)]
-        (digest frame :source source)))))
+      (for [frames (map nucleotides->frames (fasta->clj file-str))]
+        (map #(digest % :source source) frames)))))
