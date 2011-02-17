@@ -13,5 +13,5 @@
      (->peptides file-str "unknown"))
   ([file-str source]
      (flatten ;; Bucket of peptides, no need to keep the seq/frame structure
-      (for [frames (map nucleotides->frames (fasta->clj file-str))]
-        (map #(digest % :source source) frames)))))
+      (for [genome-seq (map nucleotides->frames (fasta->clj file-str))]
+        (map #(digest % :source source) genome-seq)))))
