@@ -1,9 +1,8 @@
 (ns glutton.enzyme-free
   (:use [clojure.contrib
-         [seq-utils :only [indexed]]
          [def :only [defnk]]]
-        [glutton [peptide-record]])
-  (:import [glutton.peptide-record Peptide]))
+        (glutton [peptide-record]
+                 (util :only [indexed]))))
 
 (defn- all-sub-peptides [[[position first-aa] & other-aas] config]
   (let [{:keys [source digestion]} config]

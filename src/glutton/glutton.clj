@@ -1,7 +1,7 @@
 (ns glutton.glutton
-  ( :use (clojure.contrib [def :only [defnk]]
-                          [seq-utils :only [indexed]])
-         (glutton [peptide-record :only [extend-with initiate-peptide]])))
+  ( :use (clojure.contrib [def :only [defnk]])
+         (glutton [peptide-record :only [extend-with initiate-peptide]]
+                  [util :only [indexed]])))
 
 (defn- above-threshold
   "Return only those peptides whose mass is greater than or equal to 'mass-threshold'"
