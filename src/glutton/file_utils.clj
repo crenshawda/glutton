@@ -1,14 +1,18 @@
 (ns glutton.file-utils
-  (:use (clojure.contrib [duck-streams :only [write-lines]])
-        (clojure.java [io :only [writer reader]])))
+  (:use (clojure.java (io :only [copy file reader writer]))))
 
-;; THIS: Is stolen from `encode-mongo.import.varsplice
 (defn file->records [file]
   (partition 2
              (partition-by #(.startsWith % ">")
                            (line-seq (reader file)))))
 
-;; TODO: Figgur out a way to do this without duck-streams
+(defn write-lines
+  "Takes a sequence of Strings and prints them to file `f`, separated by newlines.
+
+  (This is a re-implementation of the old clojure.contrib.duck-streams/write-lines)"
+  [f lines]
+  (copy (file f) (apply str (interpose "\n" lines))))
+
 ;; Alternate version with JUST peptide and start postion
 (defn ->tab-delimited
   "Outputs peptide records into a simple tab-delimited format"

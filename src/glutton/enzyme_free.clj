@@ -1,9 +1,8 @@
 (ns glutton.enzyme-free
   (:use [clojure.contrib
-         [seq-utils :only [indexed]]
          [def :only [defnk]]]
-        [glutton [peptide-record]])
-  (:import [glutton.peptide-record Peptide]))
+        (glutton [peptide-record]
+                 (util :only [indexed]))))
 
 (defn- all-sub-peptides [[[position first-aa] & other-aas] config]
   (let [{:keys [source digestion]} config]
@@ -29,7 +28,7 @@
 
   Optional Keyword Parameters:
   :mass-target    -> Mass target center, used to calculate the range of aceptable masses.  Defaults to 500 daltons.
-  :mass-threshold -> Mass threshold is a ± value that is used to calculate the mass range.  Deaults to 100 daltons.
+  :mass-tolerance -> Mass tolerance is a ± value that is used to calculate the mass range.  Deaults to 100 daltons.
   :source         -> Organism that the genome came from.  Defaults to unknown."
   [genome :mass-target 500 :mass-tolerance 100 :source ""]
   (let [config {:mass-target mass-target
