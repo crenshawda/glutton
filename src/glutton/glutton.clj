@@ -180,31 +180,32 @@
                                       peptide-candidates)))
         empty-candidates (fn [_] [])
         ]
-    (loop [position 0 last-aa :-]
-      (if (not (>= position (- length 3))) ;; TODO: check this math
+    (dotimes [i 3]
+      (loop [position i last-aa :-]
+        (if (not (>= position (- length 3))) ;; TODO: check this math
 
-        ;; translate codon to amino acid; add that to list
+          ;; translate codon to amino acid; add that to list
 
-        (let [aa (amino-acid  (.substring nucleotides position (+ position 3)))]
-          (swap! candidates extend-candidates position aa last-aa)
-          (cond (break? aa)
-                (do
-                  ;; copy all candidate peptides that satisfy the mass filter to peptides collection
-                  (swap! all-peptides add-filtered-candidates)
-                  ;; Then, remove any candidates that have all their breaks
-                  (swap! candidates remove-breaks))
+          (let [aa (amino-acid  (.substring nucleotides position (+ position 3)))]
+            (swap! candidates extend-candidates position aa last-aa)
+            (cond (break? aa)
+                  (do
+                    ;; copy all candidate peptides that satisfy the mass filter to peptides collection
+                    (swap! all-peptides add-filtered-candidates)
+                    ;; Then, remove any candidates that have all their breaks
+                    (swap! candidates remove-breaks))
 
-                (and (= :. aa) (break? last-aa))
-                ;; clear out all candidates, flushing nothing
-                (swap! candidates empty-candidates)
+                  (and (= :. aa) (break? last-aa))
+                  ;; clear out all candidates, flushing nothing
+                  (swap! candidates empty-candidates)
 
-                (= :. aa) ;; if it's just a stop, then copy all proper mass candidates out
-                ;; begin anew with no candidates
+                  (= :. aa) ;; if it's just a stop, then copy all proper mass candidates out
+                  ;; begin anew with no candidates
 
-                (do (swap! all-peptides add-filtered-candidates)
-                    (swap! candidates empty-candidates)))
-          (recur (+ position 3) aa))
-        (swap! all-peptides add-filtered-candidates)))
+                  (do (swap! all-peptides add-filtered-candidates)
+                      (swap! candidates empty-candidates)))
+            (recur (+ position 3) aa))
+          (swap! all-peptides add-filtered-candidates))))
     @all-peptides))
 
 
