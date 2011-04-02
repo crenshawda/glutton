@@ -146,26 +146,26 @@
 
         start? (set start-with)
 
-        extend-candidates (fn [cans start aa last-aa] ;;TODO start might be different on reverse
-                            (let [len (count cans)]
+        extend-candidates (fn [candidates start aa last-aa] ;;TODO start might be different on reverse
+                            (let [len (count candidates)]
                               (loop [i 0
-                                     cs (transient cans)]
+                                     cs candidates]
                                 (if (not (== i len))
-                                  (recur (inc i) (assoc! cs
+                                  (recur (inc i) (assoc cs
                                                          i
                                                          (-> (get cs i)
                                                              (extend-with aa)
                                                              (#(if (break? aa)
                                                                  (update-in % [:breaks] inc)
                                                                  %)))))
-                                  (persistent! (if (or (break? last-aa)
-                                                       (start? aa)
-                                                       (= :M last-aa)
-                                                       (= :. last-aa))
-                                                 (conj! cs (initiate-peptide aa start
-                                                                             (if (break? aa) 1 0)
-                                                                             "SOURCE" "GLUTTON"))
-                                                 cs))))))
+                                   (if (or (break? last-aa)
+                                             (start? aa)
+                                             (= :M last-aa)
+                                             (= :. last-aa))
+                                       (conj cs (initiate-peptide aa start
+                                                                  (if (break? aa) 1 0)
+                                                                  "SOURCE" "GLUTTON"))
+                                       cs)))))
 
 
         add-filtered-candidates (fn [all-peptides]
