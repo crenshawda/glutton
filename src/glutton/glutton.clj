@@ -150,7 +150,7 @@
                             (let [len (count candidates)]
                               (loop [i 0
                                      cs candidates]
-                                (if (not (== i len))
+                                (if (not= i len)
                                   (recur (inc i) (assoc cs
                                                          i
                                                          (-> (get cs i)
@@ -178,8 +178,8 @@
         ]
 
     (loop [position 0 codon (char-array 3) codon-index 0 last-aa :-]
-      (if (not (== position length))
-        (if (== codon-index 3)
+      (if (not (= position length))
+        (if (= codon-index 3)
           ;; translate codon to amino acid; add that to list
           (let [aa (amino-acid codon)]
             (swap! candidates extend-candidates (- position 3) aa last-aa)
@@ -199,16 +199,15 @@
                   ;; begin anew with no candidates
 
                   (do (swap! all-peptides add-filtered-candidates)
-                      (swap! candidates empty-candidates))
-                  )
-            (recur (unchecked-inc position)
+                      (swap! candidates empty-candidates)))
+            (recur (inc position)
                    (char-array 3 [(.charAt nucleotides position) \- \-])
                    1
                    aa))
           (do (aset-char codon codon-index (.charAt nucleotides position))
-              (recur (unchecked-inc position)
+              (recur (inc position)
                      codon
-                     (unchecked-inc codon-index)
+                     (inc codon-index)
                      last-aa)))
         (do (swap! all-peptides add-filtered-candidates)
             @all-peptides)))))
