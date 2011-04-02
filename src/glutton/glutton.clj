@@ -122,7 +122,6 @@
 
 
 (defn- amino-acid [codon]
-
   (my-codon-translation-matrix (seq codon)))
 
 
@@ -182,7 +181,7 @@
         empty-candidates (fn [_] [])
         ]
 
-    (loop [position 0 codon (char-array 3) codon-index 0 last-aa :-]
+    (loop [position 0 codon [] codon-index 0 last-aa :-]
       (if (not (= position length))
         (if (= codon-index 3)
           ;; translate codon to amino acid; add that to list
@@ -206,14 +205,13 @@
                   (do (swap! all-peptides add-filtered-candidates)
                       (swap! candidates empty-candidates)))
             (recur (inc position)
-                   (char-array 3 [(.charAt nucleotides position) \- \-])
+                   [(.charAt nucleotides position)]
                    1
                    aa))
-          (do (aset-char codon codon-index (.charAt nucleotides position))
-              (recur (inc position)
-                     codon
-                     (inc codon-index)
-                     last-aa)))
+          (recur (inc position)
+                 (conj codon (.charAt nucleotides position))
+                 (inc codon-index)
+                 last-aa))
         (do (swap! all-peptides add-filtered-candidates)
             @all-peptides)))))
 
