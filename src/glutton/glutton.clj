@@ -54,6 +54,167 @@
             :default (recur other-aas new-candidates config))
       (above-threshold mass-threshold new-candidates))))
 
+(def my-codon-translation-matrix
+     {"ATG" :M ; synonymous with :START codon
+      "TAA" :.
+      "TGA" :.
+      "TAG" :. ; synonymous with :STOP codon
+      "GCT" :A
+      "GCC" :A
+      "GCA" :A
+      "GCG" :A
+      "TTA" :L
+      "TTG" :L
+      "CTT" :L
+      "CTC" :L
+      "CTA" :L
+      "CTG" :L
+      "CGT" :R
+      "CGC" :R
+      "CGA" :R
+      "CGG" :R
+      "AGA" :R
+      "AGG" :R
+      "AAA" :K
+      "AAG" :K
+      "AAT" :N
+      "AAC" :N
+      "GAT" :D
+      "GAC" :D
+      "TTT" :F
+      "TTC" :F
+      "TGT" :C
+      "TGC" :C
+      "CCT" :P
+      "CCC" :P
+      "CCA" :P
+      "CCG" :P
+      "CAA" :Q
+      "CAG" :Q
+      "TCT" :S
+      "TCC" :S
+      "TCA" :S
+      "TCG" :S
+      "AGT" :S
+      "AGC" :S
+      "GAA" :E
+      "GAG" :E
+      "ACT" :T
+      "ACC" :T
+      "ACA" :T
+      "ACG" :T
+      "GGT" :G
+      "GGC" :G
+      "GGA" :G
+      "GGG" :G
+      "TGG" :W
+      "CAT" :H
+      "CAC" :H
+      "TAT" :Y
+      "TAC" :Y
+      "ATT" :I
+      "ATC" :I
+      "ATA" :I
+      "GTT" :V
+      "GTC" :V
+      "GTA" :V
+      "GTG" :V})
+
+
+(defn- amino-acid [codon]
+  (my-codon-translation-matrix (String. codon)))
+
+
+
+
+
+
+
+
+
+(defn- loop-digest
+  [^String nucleotides {:keys [mass-threshold
+                               missed-cleavages
+                               break-after
+                               start-with]}]
+  (let [all-peptides (atom [])
+        candidates (atom [])
+
+        length (.length nucleotides)
+
+        break? (set break-after)
+
+        start? (set start-with)
+
+        extend-candidates (fn [cans start aa last-aa] ;;TODO start might be different on reverse
+                            (let [len (count cans)]
+                              (loop [i 0
+                                     cs (transient cans)]
+                                (if (not (== i len))
+                                  (recur (inc i) (assoc! cs
+                                                         i
+                                                         (-> (get cs i)
+                                                             (extend-with aa)
+                                                             (#(if (break? aa)
+                                                                 (update-in % [:breaks] inc)
+                                                                 %)))))
+                                  (persistent! (if (or (break? last-aa)
+                                                       (start? aa)
+                                                       (= :M last-aa)
+                                                       (= :. last-aa))
+                                                 (conj! cs (initiate-peptide aa start
+                                                                             (if (break? aa) 1 0)
+                                                                             "SOURCE" "GLUTTON"))
+                                                 cs))))))
+
+
+        add-filtered-candidates (fn [all-peptides]
+                                  (into all-peptides (above-threshold mass-threshold @candidates)))
+        remove-breaks (fn [peptide-candidates]
+                        (vec (remove #(> (:breaks %)
+                                          missed-cleavages)
+                                      peptide-candidates)))
+        empty-candidates (fn [_] [])
+        ]
+
+    (loop [position 0 codon (char-array 3) codon-index 0 last-aa :-]
+      (if (not (== position length))
+        (if (== codon-index 3)
+          ;; translate codon to amino acid; add that to list
+          (let [aa (amino-acid codon)]
+            (swap! candidates extend-candidates (- position 3) aa last-aa)
+
+            (cond (break? aa)
+                  (do
+                     ;; copy all candidate peptides that satisfy the mass filter to peptides collection
+                    (swap! all-peptides add-filtered-candidates)
+                    ;; Then, remove any candidates that have all their breaks
+                    (swap! candidates remove-breaks))
+
+                  (and (= :. aa) (break? last-aa))
+                  ;; clear out all candidates, flushing nothing
+                  (swap! candidates empty-candidates)
+
+                  (= :. aa) ;; if it's just a stop, then copy all proper mass candidates out
+                  ;; begin anew with no candidates
+
+                  (do (swap! all-peptides add-filtered-candidates)
+                      (swap! candidates empty-candidates))
+                  )
+            (recur (unchecked-inc position)
+                   (char-array 3 [(.charAt nucleotides position) \- \-])
+                   1
+                   aa))
+          (do (aset-char codon codon-index (.charAt nucleotides position))
+              (recur (unchecked-inc position)
+                     codon
+                     (unchecked-inc codon-index)
+                     last-aa)))
+        (do (swap! all-peptides add-filtered-candidates)
+            @all-peptides)))))
+
+
+
 (defnk digest
   "Perform a synthetic enzymatic digest of a peptide sequence.
 
