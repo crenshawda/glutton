@@ -1,7 +1,8 @@
 (ns glutton.glutton
   ( :use (clojure.contrib [def :only [defnk]])
          (glutton [peptide-record :only [extend-with initiate-peptide]]
-                  [util :only [indexed]])))
+                  [util :only [indexed]]
+                  (genomic-utils :only [reverse-complement]))))
 
 (defn- above-threshold
   "Return only those peptides whose mass is greater than or equal to 'mass-threshold'"
@@ -130,82 +131,87 @@
 
 
 
-
-
-(defn- loop-digest
+(defn loop-digest
   [^String nucleotides {:keys [mass-threshold
                                missed-cleavages
                                break-after
                                start-with]}]
   (let [all-peptides (atom [])
-        candidates (atom [])
+
 
         length (.length nucleotides)
+
+        ^String reverse-complement (reverse-complement nucleotides)
 
         break? (set break-after)
 
         start? (set start-with)
 
         extend-candidates (fn [candidates start aa last-aa] ;;TODO start might be different on reverse
-                            (let [len (count candidates)]
-                              (loop [i 0
-                                     cs candidates]
-                                (if (not= i len)
-                                  (recur (inc i) (assoc cs
-                                                         i
-                                                         (-> (get cs i)
-                                                             (extend-with aa)
-                                                             (#(if (break? aa)
-                                                                 (update-in % [:breaks] inc)
-                                                                 %)))))
-                                   (if (or (break? last-aa)
-                                             (start? aa)
-                                             (= :M last-aa)
-                                             (= :. last-aa))
-                                       (conj cs (initiate-peptide aa start
-                                                                  (if (break? aa) 1 0)
-                                                                  "SOURCE" "GLUTTON"))
-                                       cs)))))
+
+                                        ; TODO: turn this into a map call
+                            (loop [i 0 cs candidates]
+                              (if (not= i (count candidates))
+                                (recur (inc i) (assoc cs
+                                                 i
+                                                 (-> (get cs i)
+                                                     (extend-with aa)
+                                                     (#(if (break? aa)
+                                                         (update-in % [:breaks] inc)
+                                                         %)))))
+                                (if (or (break? last-aa)
+                                        (start? aa)
+                                        (= :M last-aa)
+                                        (= :. last-aa))
+                                  (conj cs (initiate-peptide aa start
+                                                             (if (break? aa) 1 0)
+                                                             "SOURCE" "GLUTTON"))
+                                  cs))))
 
         above-threshold (fn [peptide-candidates]
-                          (filter #(>= (:mass %)
-                                       mass-threshold)
+                          (filter #(>= (:mass %) mass-threshold)
                                   peptide-candidates))
 
-        add-filtered-candidates (fn [all-peptides]
-                                  (into all-peptides (above-threshold @candidates)))
+        add-filtered-candidates (fn [all-peptides candidates]
+                                  (into all-peptides (above-threshold candidates)))
+
         remove-breaks (fn [peptide-candidates]
-                        (vec (remove #(> (:breaks %)
-                                          missed-cleavages)
-                                      peptide-candidates)))
-        empty-candidates (fn [_] [])
-        ]
-    (dotimes [i 3]
-      (loop [position i last-aa :-]
-        (if (not (>= position (- length 3))) ;; TODO: check this math
+                        (vec (remove #(> (:breaks %) missed-cleavages)
+                                     peptide-candidates)))]
+    ;; TODO: coordinates will be screwed up on the reverse
+    (doseq [strand [:F :R]]
+      (let [nt (if (= strand :F) nucleotides reverse-complement)]
+        (doseq [frame [0 1 2]]
+          (time
+           (do
+             (println "Digesting frame" frame "of strand" (name strand))
+             (with-local-vars [candidates []] ;; these are thread-local, non-interned vars
+               (loop [position frame last-aa :-]
+                 (if (not (>= position (- length 3))) ;; TODO: check this math
 
-          ;; translate codon to amino acid; add that to list
+                   ;; translate codon to amino acid; add that to list
 
-          (let [aa (amino-acid  (.substring nucleotides position (+ position 3)))]
-            (swap! candidates extend-candidates position aa last-aa)
-            (cond (break? aa)
-                  (do
-                    ;; copy all candidate peptides that satisfy the mass filter to peptides collection
-                    (swap! all-peptides add-filtered-candidates)
-                    ;; Then, remove any candidates that have all their breaks
-                    (swap! candidates remove-breaks))
+                   (let [aa (amino-acid (.substring nt position (+ position 3)))]
+                     (var-set candidates (extend-candidates @candidates position aa last-aa))
+                     (cond (break? aa)
+                           (do
+                             ;; copy all candidate peptides that satisfy the mass filter to peptides collection
+                             (swap! all-peptides add-filtered-candidates @candidates)
+                             ;; Then, remove any candidates that have all their breaks
+                             (var-set candidates
+                                      (remove-breaks @candidates)))
 
-                  (and (= :. aa) (break? last-aa))
-                  ;; clear out all candidates, flushing nothing
-                  (swap! candidates empty-candidates)
+                           (and (= :. aa) (break? last-aa))
+                           ;; clear out all candidates, flushing nothing
+                           (var-set candidates [])
 
-                  (= :. aa) ;; if it's just a stop, then copy all proper mass candidates out
-                  ;; begin anew with no candidates
+                           (= :. aa) ;; if it's just a stop, then copy all proper mass candidates out
+                           ;; begin anew with no candidates
 
-                  (do (swap! all-peptides add-filtered-candidates)
-                      (swap! candidates empty-candidates)))
-            (recur (+ position 3) aa))
-          (swap! all-peptides add-filtered-candidates))))
+                           (do (swap! all-peptides add-filtered-candidates @candidates)
+                               (var-set candidates [])))
+                     (recur (+ position 3) aa))
+                   (swap! all-peptides add-filtered-candidates @candidates)))))))))
     @all-peptides))
 
 
