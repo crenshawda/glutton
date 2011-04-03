@@ -180,7 +180,8 @@
                                      peptide-candidates)))]
     ;; TODO: coordinates will be screwed up on the reverse
     (doseq [strand [:F :R]]
-      (let [nt (if (= strand :F) nucleotides reverse-complement)]
+      (let [nt (if (= strand :F) nucleotides reverse-complement)
+            get-codon (fn [position] (.substring nt position (+ position 3)))]
         (doseq [frame [0 1 2]]
           (time
            (do
@@ -191,7 +192,7 @@
 
                    ;; translate codon to amino acid; add that to list
 
-                   (let [aa (amino-acid (.substring nt position (+ position 3)))]
+                   (let [aa (amino-acid (get-codon position))]
                      (var-set candidates (extend-candidates @candidates position aa last-aa))
                      (cond (break? aa)
                            (do
