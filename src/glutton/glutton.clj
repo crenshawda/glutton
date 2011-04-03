@@ -56,80 +56,70 @@
       (above-threshold mass-threshold new-candidates))))
 
 (def my-codon-translation-matrix
-     {(seq "ATG") :M                     ; synonymous with :START codon
-      (seq "TAA") :.
-      (seq "TGA") :.
-      (seq "TAG") :.                     ; synonymous with :STOP codon
-      (seq "GCT") :A
-      (seq "GCC") :A
-      (seq "GCA") :A
-      (seq "GCG") :A
-      (seq "TTA") :L
-      (seq "TTG") :L
-      (seq "CTT") :L
-      (seq "CTC") :L
-      (seq "CTA") :L
-      (seq "CTG") :L
-      (seq "CGT") :R
-      (seq "CGC") :R
-      (seq "CGA") :R
-      (seq "CGG") :R
-      (seq "AGA") :R
-      (seq "AGG") :R
-      (seq "AAA") :K
-      (seq "AAG") :K
-      (seq "AAT") :N
-      (seq "AAC") :N
-      (seq "GAT") :D
-      (seq "GAC") :D
-      (seq "TTT") :F
-      (seq "TTC") :F
-      (seq "TGT") :C
-      (seq "TGC") :C
-      (seq "CCT") :P
-      (seq "CCC") :P
-      (seq "CCA") :P
-      (seq "CCG") :P
-      (seq "CAA") :Q
-      (seq "CAG") :Q
-      (seq "TCT") :S
-      (seq "TCC") :S
-      (seq "TCA") :S
-      (seq "TCG") :S
-      (seq "AGT") :S
-      (seq "AGC") :S
-      (seq "GAA") :E
-      (seq "GAG") :E
-      (seq "ACT") :T
-      (seq "ACC") :T
-      (seq "ACA") :T
-      (seq "ACG") :T
-      (seq "GGT") :G
-      (seq "GGC") :G
-      (seq "GGA") :G
-      (seq "GGG") :G
-      (seq "TGG") :W
-      (seq "CAT") :H
-      (seq "CAC") :H
-      (seq "TAT") :Y
-      (seq "TAC") :Y
-      (seq "ATT") :I
-      (seq "ATC") :I
-      (seq "ATA") :I
-      (seq "GTT") :V
-      (seq "GTC") :V
-      (seq "GTA") :V
-      (seq "GTG") :V})
-
-
-(defn- amino-acid [codon]
-  (my-codon-translation-matrix (seq codon)))
-
-
-
-
-
-
+     {"ATG" :M
+      "TAA" :.
+      "TGA" :.
+      "TAG" :.
+      "GCT" :A
+      "GCC" :A
+      "GCA" :A
+      "GCG" :A
+      "TTA" :L
+      "TTG" :L
+      "CTT" :L
+      "CTC" :L
+      "CTA" :L
+      "CTG" :L
+      "CGT" :R
+      "CGC" :R
+      "CGA" :R
+      "CGG" :R
+      "AGA" :R
+      "AGG" :R
+      "AAA" :K
+      "AAG" :K
+      "AAT" :N
+      "AAC" :N
+      "GAT" :D
+      "GAC" :D
+      "TTT" :F
+      "TTC" :F
+      "TGT" :C
+      "TGC" :C
+      "CCT" :P
+      "CCC" :P
+      "CCA" :P
+      "CCG" :P
+      "CAA" :Q
+      "CAG" :Q
+      "TCT" :S
+      "TCC" :S
+      "TCA" :S
+      "TCG" :S
+      "AGT" :S
+      "AGC" :S
+      "GAA" :E
+      "GAG" :E
+      "ACT" :T
+      "ACC" :T
+      "ACA" :T
+      "ACG" :T
+      "GGT" :G
+      "GGC" :G
+      "GGA" :G
+      "GGG" :G
+      "TGG" :W
+      "CAT" :H
+      "CAC" :H
+      "TAT" :Y
+      "TAC" :Y
+      "ATT" :I
+      "ATC" :I
+      "ATA" :I
+      "GTT" :V
+      "GTC" :V
+      "GTA" :V
+      "GTG" :V})
 
 (defn loop-digest
   [^String nucleotides {:keys [mass-threshold
@@ -192,7 +182,7 @@
 
                    ;; translate codon to amino acid; add that to list
 
-                   (let [aa (amino-acid (get-codon position))]
+                   (let [aa (my-codon-translation-matrix (get-codon position))]
                      (var-set candidates (extend-candidates @candidates position aa last-aa))
                      (cond (break? aa)
                            (do
