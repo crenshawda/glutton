@@ -127,18 +127,11 @@
                                break-after
                                start-with]}]
   (let [all-peptides (atom [])
-
-
         length (.length nucleotides)
-
         ^String reverse-complement (reverse-complement nucleotides)
-
         break? (set break-after)
-
         start? (set start-with)
-
         extend-candidates (fn [candidates start aa last-aa] ;;TODO start might be different on reverse
-
                                         ; TODO: turn this into a map call
                             (loop [i 0 cs candidates]
                               (if (not= i (count candidates))
@@ -151,20 +144,17 @@
                                                          %)))))
                                 (if (or (break? last-aa)
                                         (start? aa)
-                                        (= :M last-aa)
+                                        (= :M last-aa) ;; N-term Ms are often cleaved
                                         (= :. last-aa))
                                   (conj cs (initiate-peptide aa start
                                                              (if (break? aa) 1 0)
                                                              "SOURCE" "GLUTTON"))
                                   cs))))
-
         above-threshold (fn [peptide-candidates]
                           (filter #(>= (:mass %) mass-threshold)
                                   peptide-candidates))
-
         add-filtered-candidates (fn [all-peptides candidates]
                                   (into all-peptides (above-threshold candidates)))
-
         remove-breaks (fn [peptide-candidates]
                         (vec (remove #(> (:breaks %) missed-cleavages)
                                      peptide-candidates)))]
