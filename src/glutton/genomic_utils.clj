@@ -1,5 +1,6 @@
 (ns glutton.genomic-utils
-  (:use (clojure [string :only [upper-case join]])
+  (:use (clojure (string :only [upper-case join]
+                         :as string))
         (glutton [lexicon :only [amino-acid-dictionary
                                  codon-translation-matrix
                                  water-constants]]
@@ -57,7 +58,12 @@
                            s
                            (reverse-char-seq s)))))
 
-(defn- compliment-nucleotides [s] (replace {\A \T \T \A \C \G \G \C} s))
+(defn complement-nucleotides [^String nucleotides]
+  (apply str (replace {\A \T \T \A \C \G \G \C} nucleotides)))
+
+(defn reverse-complement [^String nucleotides]
+  (complement-nucleotides (string/reverse nucleotides)))
+
 (defn- as-codon [s] (keyword (upper-case (join s))))
 (defn- ->aa [codon] (codon codon-translation-matrix))
 
@@ -74,6 +80,6 @@
              (map as-codon)
              (map ->aa))
         (->> frame
-             (map compliment-nucleotides)
+             (map complement-nucleotides)
              (map as-codon)
              (map ->aa))))))
