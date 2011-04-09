@@ -1,5 +1,6 @@
 (ns glutton.glutton
   ( :use (clojure.contrib [def :only [defnk]])
+         (clojure (set :only [superset?]))
          (glutton [peptide :only [extend-with initiate-peptide dna-peptide-candidate extend-peptide finish-candidate]]
                   [util :only [indexed]]
                   (genomic-utils :only [reverse-complement]))))
@@ -56,70 +57,30 @@
       (above-threshold mass-threshold new-candidates))))
 
 (def my-codon-translation-matrix
-     {"ATG" :M
-      "TAA" :.
-      "TGA" :.
-      "TAG" :.
-      "GCT" :A
-      "GCC" :A
-      "GCA" :A
-      "GCG" :A
-      "TTA" :L
-      "TTG" :L
-      "CTT" :L
-      "CTC" :L
-      "CTA" :L
-      "CTG" :L
-      "CGT" :R
-      "CGC" :R
-      "CGA" :R
-      "CGG" :R
-      "AGA" :R
-      "AGG" :R
-      "AAA" :K
-      "AAG" :K
-      "AAT" :N
-      "AAC" :N
-      "GAT" :D
-      "GAC" :D
-      "TTT" :F
-      "TTC" :F
-      "TGT" :C
-      "TGC" :C
-      "CCT" :P
-      "CCC" :P
-      "CCA" :P
-      "CCG" :P
-      "CAA" :Q
-      "CAG" :Q
-      "TCT" :S
-      "TCC" :S
-      "TCA" :S
-      "TCG" :S
-      "AGT" :S
-      "AGC" :S
-      "GAA" :E
-      "GAG" :E
-      "ACT" :T
-      "ACC" :T
-      "ACA" :T
-      "ACG" :T
-      "GGT" :G
-      "GGC" :G
-      "GGA" :G
-      "GGG" :G
-      "TGG" :W
-      "CAT" :H
-      "CAC" :H
-      "TAT" :Y
-      "TAC" :Y
-      "ATT" :I
-      "ATC" :I
-      "ATA" :I
-      "GTT" :V
-      "GTC" :V
-      "GTA" :V
-      "GTG" :V})
+     {"ATG" :M "TAA" :. "TGA" :. "TAG" :. "GCT" :A "GCC" :A "GCA" :A "GCG" :A
+      "TTA" :L "TTG" :L "CTT" :L "CTC" :L "CTA" :L "CTG" :L "CGT" :R "CGC" :R
+      "CGA" :R "CGG" :R "AGA" :R "AGG" :R "AAA" :K "AAG" :K "AAT" :N "AAC" :N
+      "GAT" :D "GAC" :D "TTT" :F "TTC" :F "TGT" :C "TGC" :C "CCT" :P "CCC" :P
+      "CCA" :P "CCG" :P "CAA" :Q "CAG" :Q "TCT" :S "TCC" :S "TCA" :S "TCG" :S
+      "AGT" :S "AGC" :S "GAA" :E "GAG" :E "ACT" :T "ACC" :T "ACA" :T "ACG" :T
+      "GGT" :G "GGC" :G "GGA" :G "GGG" :G "TGG" :W "CAT" :H "CAC" :H "TAT" :Y
+      "TAC" :Y "ATT" :I "ATC" :I "ATA" :I "GTT" :V "GTC" :V "GTA" :V "GTG" :V})
+
+(defn sequence-type
+  "Based on sampling the first 100 monomers of the given biopolymer sequence,
+  determines if the sequence is DNA, RNA, or protein."
+  [^String sequence]
+  (let [dna-bases #{\A \C \G \T}
+        rna-bases #{\A \C \G \U}
+        amino-acids #{\A \R \N \D \C
+                      \E \Q \G \H \I
+                      \L \K \M \F \P
+                      \S \T \W \Y \V}
+        monomers (set (take 100 sequence))]
+    (condp superset? monomers
+      dna-bases :dna
+      rna-bases :rna
+      amino-acids :protein)))
 
 (defn loop-digest
   [sequence-id ^String nucleotides {:keys [mass-threshold
