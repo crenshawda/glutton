@@ -57,11 +57,13 @@
                                        mass
                                        (if (zero? breaks)
                                          breaks
-                                         (dec breaks))))))
+                                         (if (= (last peptide) :.)
+                                           breaks
+                                           (dec breaks)))))))
 
 (defn dna-peptide-candidate
   "Constructor function for a DNA-based peptide candidate"
-  [initial-amino-acid strand strand-start mass-type sequence-id overall-sequence-length]
+  [initial-amino-acid strand strand-start mass-type sequence-id overall-sequence-length & [initial-breaks]]
   (let [strand-dependent-start (if (= strand :+) strand-start)
         strand-dependent-stop (if (= strand :-) (- overall-sequence-length strand-start))]
     (DNAPeptideCandidate. [initial-amino-acid]
@@ -71,7 +73,7 @@
                           strand
                           strand-dependent-start
                           strand-dependent-stop
-                          0
+                          (or initial-breaks 0)
                           sequence-id
                           overall-sequence-length)))
 
