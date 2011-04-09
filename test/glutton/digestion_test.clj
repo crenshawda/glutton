@@ -1,5 +1,5 @@
 (ns glutton.digestion-test
-  (:use (glutton (peptide-record :only [peptide]))
+  (:use (glutton (peptide :only [peptide]))
         clojure.test)
   (:require (glutton (glutton :as gu)
                      (enzyme-free :as ef))))
