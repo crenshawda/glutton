@@ -23,3 +23,29 @@
                                                :missed-cleavages 2})]
       (is (= 3234797
              (count peps))))))
+
+
+
+(let [hmg20b-fasta (file (resource "hmg20b.fasta"))
+      hmg20b-rna (:sequence (first (fasta->clj hmg20b-fasta)))]
+  (deftest ^{:integration true}
+    hmg20b-peptide-count
+    (let [peps (loop-digest "HMG20B mRNA" hmg20b-rna {:break-after [:K :R]
+                                                      :start-with [:M]
+                                                      :mass-threshold 500
+                                                      :missed-cleavages 2})]
+      (is (= 602
+             (count peps))))))
+
+
+(let [beta-catenin-fasta (file (resource "beta-catenin.fasta"))
+      beta-catenin-aa (:sequence (first (fasta->clj beta-catenin-fasta)))]
+  (deftest ^{:integration true}
+    beta-catenin-peptide-count
+    (let [peps (loop-digest "beta catenin" beta-catenin-aa {:break-after [:K :R]
+                                                            :start-with [:M]
+                                                            :mass-threshold 500
+                                                            :missed-cleavages 2})]
+      (is ;; this is almost certainly wrong
+       (= 304
+             (count peps))))))
