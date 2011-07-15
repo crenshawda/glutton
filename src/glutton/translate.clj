@@ -46,9 +46,18 @@
                           :or {code standard-genetic-code
                                frame 0}}]
   {:pre [(contains? #{0 1 2} frame)]}
-  (apply str
-         (map (comp #(get code % "X") string/upper-case (partial apply str))
-              (partition 3 (drop frame nucleotides)))))
+  (let [sb (new StringBuffer)
+        max-pos (- (.length nucleotides) 3)
+        upcased-nucleotides (string/upper-case nucleotides)]
+    (loop [position frame]
+      (if (<= position max-pos)
+        (let [codon-end (+ position 3)]
+          (.append sb (get code
+                           (.substring upcased-nucleotides position codon-end)
+                           "X"))
+          (recur codon-end))))
+    (.toString sb)))
+
 
 (defn complement-nucleotides
   "Converts each nucleotide character to its complement.  All letters in the nucletoide
