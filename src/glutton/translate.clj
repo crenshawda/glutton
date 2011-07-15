@@ -32,6 +32,15 @@
    "TAA" "*" "TGA" "*" "TAG" "*"           ; STOP
    })
 
+(defn to-rna-code
+  "Given a genetic code map (codons to amino acids), convert all codons to use
+  RNA bases (i.e., tranform all thymines to uracils).  If you pass in an RNA
+  code map, it will remain unchanged."
+  [genetic-code]
+  (into {}
+        (for [[codon acid] genetic-code]
+          [(apply str (replace {\T \U} codon)) acid])))
+
 (defn translate
   "Translate a string of nucleotides to a string of amino acids.  Accepts optional
   keyword arguments for the genetic `:code` (a map of codon strings to amino acid

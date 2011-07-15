@@ -133,3 +133,20 @@
          {:header ">Testing"
           :sequence "ACtnnngCATACGgcataCGACT"}
          output-with-ns)))
+
+(deftest test-rna-code-conversion
+  (let [rna-standard-code
+        {"AUG" "M" "UAA" "*" "UGA" "*" "UAG" "*" "GCU" "A" "GCC" "A" "GCA" "A" "GCG" "A"
+         "UUA" "L" "UUG" "L" "CUU" "L" "CUC" "L" "CUA" "L" "CUG" "L" "CGU" "R" "CGC" "R"
+         "CGA" "R" "CGG" "R" "AGA" "R" "AGG" "R" "AAA" "K" "AAG" "K" "AAU" "N" "AAC" "N"
+         "GAU" "D" "GAC" "D" "UUU" "F" "UUC" "F" "UGU" "C" "UGC" "C" "CCU" "P" "CCC" "P"
+         "CCA" "P" "CCG" "P" "CAA" "Q" "CAG" "Q" "UCU" "S" "UCC" "S" "UCA" "S" "UCG" "S"
+         "AGU" "S" "AGC" "S" "GAA" "E" "GAG" "E" "ACU" "T" "ACC" "T" "ACA" "T" "ACG" "T"
+         "GGU" "G" "GGC" "G" "GGA" "G" "GGG" "G" "UGG" "W" "CAU" "H" "CAC" "H" "UAU" "Y"
+         "UAC" "Y" "AUU" "I" "AUC" "I" "AUA" "I" "GUU" "V" "GUC" "V" "GUA" "V" "GUG" "V"}]
+    (is (= (to-rna-code standard-genetic-code)
+           rna-standard-code)
+        "DNA to RNA code conversion works properly")
+    (is (= (to-rna-code rna-standard-code)
+           rna-standard-code)
+        "Converting an RNA code to an RNA code should be idemptoent")))
