@@ -1,36 +1,5 @@
 (ns glutton.peptide
-  (:use (glutton (genomic-utils :only [aa-mass water-mass]))))
-
-;; DEPRECATED
-(defprotocol Extend
-  "Makes stuff longer"
-  (extend-with [this item] "Adds item to a thing"))
-
-;; DEPRECATED
-(defrecord Peptide [sequence nucleotide-start mass breaks source digestion]
-  Extend
-  (extend-with [this aa]
-    (-> this
-        (update-in [:sequence] conj aa)
-        (update-in [:mass] + (aa-mass aa)))))
-
-;; DEPRECATED
-(defn peptide
-  "Simple constructor function for a Peptide record."
-  [sequence nucleotide-start mass breaks source digestion]
-  (Peptide. sequence nucleotide-start mass breaks source digestion))
-
-;; DEPRECATED
-(defn initiate-peptide
-  ([aa position source digestion]
-     (initiate-peptide aa position "n/a" source digestion))
-  ([aa position breaks source digestion]
-     (Peptide. [aa] position
-               (+ (aa-mass aa)
-                  (water-mass))
-               breaks source digestion)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  (:use (glutton (mass :only [water-mass aa-mass]))))
 
 ;; TODO: Finished peptides have an `internal-breaks` field, but this is kind of meaningless without
 ;;       an indication as to what the protease is
@@ -48,9 +17,7 @@
                       (update-in [:peptide] conj amino-acid)
                       (update-in [:mass] + (aa-mass amino-acid (:mass-type this)))))})
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; DNA Peptide Candidates
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ## DNA Peptide Candidates
 
 ;;TODO sequence-length is not actually used in the record... just its constructor
 (defrecord DNAPeptideCandidate [peptide mass mass-type strand start stop breaks sequence-id sequence-length])
@@ -102,7 +69,7 @@
         strand-dependent-stop (if (= strand :-) (- overall-sequence-length strand-start))]
     (DNAPeptideCandidate. [initial-amino-acid]
                           (+ (aa-mass initial-amino-acid mass-type)
-                             (water-mass))
+                             (water-mass mass-type))
                           mass-type
                           strand
                           strand-dependent-start
@@ -111,9 +78,7 @@
                           sequence-id
                           overall-sequence-length)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; RNA Peptide Candidates
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ## RNA Peptide Candidates
 
 (defrecord RNAPeptideCandidate [peptide mass mass-type start stop sequence-id breaks])
 (defrecord PeptideFromRNA [peptide sequence start stop mass internal-breaks])
@@ -132,7 +97,7 @@
   [initial-amino-acid start mass-type sequence-id & [initial-breaks]]
   (RNAPeptideCandidate. [initial-amino-acid]
                         (+ (aa-mass initial-amino-acid mass-type)
-                           (water-mass))
+                           (water-mass mass-type))
                         mass-type
                         start
                         nil
@@ -157,9 +122,7 @@
                                                      breaks
                                                      (dec breaks))))))}))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Protein Peptide Candidates
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ## Protein Peptide Candidates
 
 (defrecord ProteinPeptideCandidate [peptide mass mass-type start stop sequence breaks])
 (defrecord PeptideFromProtein [peptide sequence start stop mass internal-breaks])
@@ -194,7 +157,7 @@
   [initial-amino-acid start mass-type sequence-id  & [initial-breaks]]
   (ProteinPeptideCandidate. [initial-amino-acid]
                             (+ (aa-mass initial-amino-acid mass-type)
-                               (water-mass))
+                               (water-mass mass-type))
                             mass-type
                             start
                             nil

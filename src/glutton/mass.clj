@@ -1,29 +1,5 @@
-(ns glutton.lexicon)
-
-; Ref: http://en.wikipedia.org/wiki/Genetic_code 'Inverse Table' portion
-; Note: I have replaced uracil with thymine for ease of comparison (dna -> rna)
-(def codon-translation-matrix
-     {:ATG :M ; synonymous with :START codon
-      :TAA :. :TGA :. :TAG :. ; synonymous with :STOP codon
-      :GCT :A :GCC :A :GCA :A :GCG :A
-      :TTA :L :TTG :L :CTT :L :CTC :L :CTA :L :CTG :L
-      :CGT :R :CGC :R :CGA :R :CGG :R :AGA :R :AGG :R
-      :AAA :K :AAG :K
-      :AAT :N :AAC :N
-      :GAT :D :GAC :D
-      :TTT :F :TTC :F
-      :TGT :C :TGC :C
-      :CCT :P :CCC :P :CCA :P :CCG :P
-      :CAA :Q :CAG :Q
-      :TCT :S :TCC :S :TCA :S :TCG :S :AGT :S :AGC :S
-      :GAA :E :GAG :E
-      :ACT :T :ACC :T :ACA :T :ACG :T
-      :GGT :G :GGC :G :GGA :G :GGG :G
-      :TGG :W
-      :CAT :H :CAC :H
-      :TAT :Y :TAC :Y
-      :ATT :I :ATC :I :ATA :I
-      :GTT :V :GTC :V :GTA :V :GTG :V})
+(ns glutton.mass
+  "Important physical constants")
 
 (def amino-acid-dictionary
      {:. {:average-mass 0, :monoisotopic-mass 0}
@@ -48,25 +24,28 @@
       :W {:average-mass 186.2133, :monoisotopic-mass 186.07931}
       :Y {:average-mass 163.176, :monoisotopic-mass 163.06333}})
 
-; Ref: http://en.wikipedia.org/wiki/CHON
-(def chon-constants
+(def CHON
+  "Carbon, Hydrogen, Oxygen, and Nitrogen ([CHON][1]) mass constants.  These are important
+  for computing masses of organic compounds.
+
+  [1]: http://en.wikipedia.org/wiki/CHON "
      {:carbon {:monoisotopic-mass 12.00000000
                :average-mass 12.01073590}
       :hydrogen {:monoisotopic-mass 1.00782504
                  :average-mass 1.00794076}
-      :oxygen {:monoisitopic-mass 15.99491463
+      :oxygen {:monoisotopic-mass 15.99491463
                :average-mass 15.99940494}
       :nitrogen {:monoisotopic-mass 14.00307400
                  :average-mass 14.00674309}})
 
-; NOTE: Brian Risk- TODO this .98 is from my observations of theoretical
-; and measured peptide mass differences.  check validity.
-(def water-constants
-     ; H2O, get it?
-     {:monoisotopic-mass (+ (:monoisitopic-mass (:oxygen chon-constants))
-                            (* 2 (:monoisotopic-mass (:hydrogen chon-constants))))
-      :average-mass (+ (:average-mass (:oxygen chon-constants))
-                       (* 2 (:average-mass (:hydrogen chon-constants))))})
+(def water-mass
+  "Mass calculations for water (H<sub>2</sub>0)."
+  {:monoisotopic-mass (+ (:monoisotopic-mass (:oxygen CHON))
+                         (* 2 (:monoisotopic-mass (:hydrogen CHON))))
+   :average-mass (+ (:average-mass (:oxygen CHON))
+                    (* 2 (:average-mass (:hydrogen CHON))))})
 
-(def assorted-constants
-     {:average-amino-mass 125.44726659484284})
+(defn aa-mass
+  "Retrieve the mass of a given `amino-acid`"
+  [amino-acid mass-type]
+  (get-in amino-acid-dictionary [amino-acid mass-type]))

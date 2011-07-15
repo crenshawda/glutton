@@ -2,7 +2,7 @@
   (:use glutton.glutton :reload)
   (:use clojure.test)
   (:use (clojure.java (io :only [file resource]))
-        (glutton (genomic-utils :only [fasta->clj]))))
+        (glutton (fasta :only [parse-fasta]))))
 
 (deftest test-sequence-type
   (let [dna "ACGATCGATGGCTACGTTAGTGCTACGTGATCGTAGCGTCGATGACGATCGATGGCTACGTTAGTGCTACGTGATCGTAGCGTCGATG"
@@ -14,7 +14,7 @@
          protein :protein)))
 
 (let [ecoli-fasta (file (resource "ecoli.fasta"))
-      ecoli-dna (:sequence (first (fasta->clj ecoli-fasta)))]
+      ecoli-dna (:sequence (first (parse-fasta ecoli-fasta)))]
   (deftest ^{:integration true}
     ecoli-peptide-count
     (let [peps (loop-digest "ECOLI" ecoli-dna {:break-after [:K :R]
@@ -27,7 +27,7 @@
 
 
 (let [hmg20b-fasta (file (resource "hmg20b.fasta"))
-      hmg20b-rna (:sequence (first (fasta->clj hmg20b-fasta)))]
+      hmg20b-rna (:sequence (first (parse-fasta hmg20b-fasta)))]
   (deftest ^{:integration true}
     hmg20b-peptide-count
     (let [peps (loop-digest "HMG20B mRNA" hmg20b-rna {:break-after [:K :R]
@@ -39,7 +39,7 @@
 
 
 (let [beta-catenin-fasta (file (resource "beta-catenin.fasta"))
-      beta-catenin-aa (:sequence (first (fasta->clj beta-catenin-fasta)))]
+      beta-catenin-aa (:sequence (first (parse-fasta beta-catenin-fasta)))]
   (deftest ^{:integration true}
     beta-catenin-peptide-count
     (let [peps (loop-digest "beta catenin" beta-catenin-aa {:break-after [:K :R]
