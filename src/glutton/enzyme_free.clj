@@ -1,9 +1,5 @@
 (ns glutton.enzyme-free
-  "This namespace is outdated and in need of much love"
-  (:use [clojure.contrib [def :only [defnk]]]
-        (glutton [peptide])))
-
-
+  "This namespace is outdated and in need of much love")
 
 ;; (defn- indexed [s]
 ;;   (map vector (iterate inc 0) s))
