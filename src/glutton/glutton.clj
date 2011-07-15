@@ -38,11 +38,38 @@
       rna-bases :rna
       amino-acids :protein)))
 
-(defn loop-digest
-  [sequence-id ^String primary-sequence {:keys [mass-threshold
-                                           missed-cleavages
-                                           break-after
-                                           start-with]}]
+(defn digest
+  "Perform a synthetic trypsin digest of a sequence.
+
+   If the sequence is DNA, it is translated to protein in all six reading frames before digestion.
+   If the sequence is RNA, it is translated to protein in all three reading frames before digestion.
+   If the sequence is protein, it is just digested.
+
+   * `sequence-id` is an identifier for the sequence.
+   * `sequence` is the actual biopolymer sequence being digested, as a string.  Standard single-letter
+   codes should be used
+
+   Keyword parameters
+
+   * `mass-threshold`: only peptides that have a mass greater than or equal to this (in Daltons) will
+     be returned.  Useful for ignoring peptides that are too small to be of interest.  Defaults to `500`.
+   * `missed-cleavages`: proteases don't cleave with 100% efficiency.  This parameter simulates this by
+     allowing a peptide to contain some number of internal cleavage sites.  Defaults to 2.
+   * `break-after`: a vector of single-letter amino acid codes after which a peptide should be cleaved.
+     Defaults to `[\"K\" \"R\"] for trypsin.
+   * `start-with`: a vector of single-letter amino acid codes at which a new peptide should be started.
+     Defaults to `[\"M\"]` (methionine).  The first amino acid of the (possibly translated) sequence will
+     begin a new peptide, whether it is in this vector or not.
+
+  Returns a non-lazy sequence of peptides (see `glutton.peptide`)."
+  [sequence-id ^String primary-sequence & {:keys [mass-threshold
+                                                  missed-cleavages
+                                                  break-after
+                                                  start-with]
+                                           :or {mass-threshold 500
+                                                missed-cleavages 2
+                                                break-after ["K" "R"]
+                                                start-with ["M"]}}]
   (let [all-peptides (atom [])
 
         length (.length primary-sequence)
@@ -50,9 +77,7 @@
         sequence-type (sequence-type primary-sequence)
         _ (println "Sequence Type:" sequence-type)
 
-        nucleotide? #{:dna :rna}
-
-        step-size (if (nucleotide? sequence-type)
+        step-size (if (contains? #{:dna :rna} sequence-type)
                     3 1)
 
         to-aa (condp = sequence-type
@@ -60,13 +85,12 @@
                   :rna (to-rna-code standard-genetic-code)
                   :protein identity)
 
-        ;; Only if doing DNA
-        ^String reverse-complement (reverse-complement primary-sequence)
-
         break? (set break-after)
         start? (set start-with)
+
         extend-candidates (fn [candidates start aa last-aa strand]
-                            (loop [i 0 cs candidates]
+                            (loop [i 0
+                                   cs candidates]
                               (if (not= i (count candidates))
                                 (recur (inc i) (assoc cs
                                                  i
@@ -116,9 +140,9 @@
         the-main-event (fn [frame next-chunk strand]
                          (time
                           (do
-
                             (with-local-vars [candidates []] ;; these are thread-local, non-interned vars
-                              (loop [position frame last-aa :-]
+                              (loop [position frame
+                                     last-aa :-]
                                 (if (not (>= position (- length step-size))) ;; TODO: check this math
 
                                   ;; translate codon to amino acid; add that to list
@@ -145,15 +169,10 @@
                                           (do (swap! all-peptides add-filtered-candidates @candidates)
                                               (var-set candidates [])))
                                     (recur (+ position step-size) aa))
-                                  (swap! all-peptides add-filtered-candidates @candidates)))))))
-
-
-        ]
-
-
+                                  (swap! all-peptides add-filtered-candidates @candidates)))))))]
     (condp = sequence-type
         :dna (doseq [strand [:+ :-]]
-               (let [nt (if (= strand :+) primary-sequence reverse-complement)
+               (let [nt (if (= strand :+) primary-sequence (reverse-complement primary-sequence))
                      next-chunk (fn [position] (.substring nt position (+ position step-size)))]
                  (doseq [frame [0 1 2]]
                    (the-main-event frame next-chunk strand))))
@@ -167,38 +186,4 @@
                        next-chunk (fn [position] (.substring nt position (+ position step-size)))]
                    (println "Digesting " sequence-id)
                    (the-main-event 0 next-chunk nil)))
-
     @all-peptides))
-
-
-
-;; (defnk digest
-;;   "Perform a synthetic enzymatic digest of a peptide sequence.
-
-;;    aas = sequence of amino acids, given as single-letter code keywords, e.g., [:G :L :Y :T: V].
-
-;;    Optional Keyword Parameters:
-;;    :missed-cleavages -> Maximum number of internal missed cleavage sites allowed for a candidate peptide.
-;;    Defaults to 2
-;;    :break-after      -> Amino acids that signal a break.  Candidate peptides will end with one of these
-;;    amino acids.  Defaults to [:K :R] (i.e., trypsin digestion).
-;;    :start-with       -> Amino acids that signal the start of a new candidate peptide.
-;;    Defaults to [:M].  Note that the start of the digested peptide sequence always begins a new candidate,
-;;    whether it is in this list or not.
-;;    :mass-threshold   -> All candidate peptides with mass lower than this should be removed.  Defaults to 500
-;;     daltons.
-;;    :source         -> Organism that the genome came from.  Defaults to unknown.
-
-;;    Returns a lazy sequence of Peptides."
-;;   [aas :missed-cleavages 2 :break-after [:K :R] :start-with [:M] :mass-threshold 500 :source ""]
-;;   (let [break-after (set (conj break-after nil))
-;;         start-with (set start-with)
-;;         config {:missed-cleavages missed-cleavages
-;;                 :break-after break-after
-;;                 :start-with start-with
-;;                 :mass-threshold mass-threshold
-;;                 :source source
-;;                 :digestion "glutton"}]
-;;     (digest* (indexed (partition 2 1 (cons nil aas)))
-;;              []
-;;              config)))
