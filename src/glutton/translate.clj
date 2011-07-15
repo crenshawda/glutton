@@ -5,10 +5,18 @@
   [1]: http://www.bioinformatics.org/sms/index.html"
   (:require (clojure (string :as string))))
 
+(def STOP
+  "Standard symbol for a stop codon"
+  "*")
+
+(def ANY-AMINO-ACID
+  "Standard ambiguity code for any amino acid"
+  "X")
+
 (def standard-genetic-code
   "Based on the [DNA codon table](http://en.wikipedia.org/wiki/DNA_codon_table).
-  Keys are DNA codon strings, and values are single-letter amino acid codes. Stop
-  codons are represented by \"*\"."
+  Keys are DNA codon strings, and values are single-letter amino acid codes (as Strings).
+  Stop codons are represented by \"*\"."
   {"GCT" "A" "GCC" "A" "GCA" "A" "GCG" "A" ; Alanine
    "TGT" "C" "TGC" "C"                     ; Cysteine
    "GAT" "D" "GAC" "D"                     ; Aspartic Acid
@@ -29,7 +37,7 @@
    "GTT" "V" "GTC" "V" "GTA" "V" "GTG" "V" ; Valine
    "TGG" "W"                               ; Tryptophan
    "TAT" "Y" "TAC" "Y"                     ; Tyrosine
-   "TAA" "*" "TGA" "*" "TAG" "*"           ; STOP
+   "TAA" STOP "TGA" STOP "TAG" STOP        ; STOP
    })
 
 (defn to-rna-code
@@ -63,7 +71,7 @@
         (let [codon-end (+ position 3)]
           (.append sb (get code
                            (.substring upcased-nucleotides position codon-end)
-                           "X"))
+                           ANY-AMINO-ACID))
           (recur codon-end))))
     (.toString sb)))
 

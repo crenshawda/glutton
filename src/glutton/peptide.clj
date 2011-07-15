@@ -1,5 +1,6 @@
 (ns glutton.peptide
-  (:use (glutton (mass :only [water-mass aa-mass]))))
+  (:use (glutton (mass :only [water-mass aa-mass])
+                 (translate :only [STOP]))))
 
 ;; TODO: Finished peptides have an `internal-breaks` field, but this is kind of meaningless without
 ;;       an indication as to what the protease is
@@ -33,7 +34,7 @@
                                     stop (:stop this)
                                     breaks (:breaks this)
                                     length-in-nt (* 3 (count peptide))]
-                                (PeptideFromDNA. (apply str (map name peptide))
+                                (PeptideFromDNA. (apply str peptide)
                                                  (:sequence-id this)
                                                  strand
                                                  (if (= strand :+)
@@ -45,7 +46,7 @@
                                                  (:mass this)
                                                  (if (zero? breaks)
                                                    breaks
-                                                   (if (= (last peptide) :.)
+                                                   (if (= (last peptide) STOP)
                                                      breaks
                                                      (dec breaks))))))}))
 
@@ -111,14 +112,14 @@
                               (let [peptide (:peptide this)
                                     start (:start this)
                                     breaks (:breaks this)]
-                                (PeptideFromRNA. (apply str (map name peptide))
+                                (PeptideFromRNA. (apply str peptide)
                                                  (:sequence-id this)
                                                  start
                                                  (+ start (* 3 (count peptide)))
                                                  (:mass this)
                                                  (if (zero? breaks)
                                                    breaks
-                                                   (if (= (last peptide) :.)
+                                                   (if (= (last peptide) STOP)
                                                      breaks
                                                      (dec breaks))))))}))
 
@@ -134,14 +135,14 @@
                               (let [peptide (:peptide this)
                                     start (:start this)
                                     breaks (:breaks this)]
-                                (PeptideFromProtein. (apply str (map name peptide))
+                                (PeptideFromProtein. (apply str peptide)
                                                      (:sequence this)
                                                      start
                                                      (+ start (count peptide))
                                                      (:mass this)
                                                      (if (zero? breaks)
                                                        breaks
-                                                       (if (= (last peptide) :.)
+                                                       (if (= (last peptide) STOP)
                                                          breaks
                                                          (dec breaks))))))}))
 

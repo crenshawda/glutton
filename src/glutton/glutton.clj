@@ -1,11 +1,10 @@
 (ns glutton.glutton
-  ( :use (clojure.contrib [def :only [defnk]])
-         (clojure (set :only [superset?]))
+  ( :use (clojure (set :only [superset?]))
          (glutton [peptide :only [dna-peptide-candidate
                                   extend-peptide finish-candidate
                                   rna-peptide-candidate
                                   protein-peptide-candidate]]
-                  (translate :only [reverse-complement]))))
+                  (translate :only [reverse-complement standard-genetic-code to-rna-code STOP]))))
 
 (defn- above-threshold
   "Return only those peptides whose mass is greater than or equal to 'mass-threshold'"
@@ -21,28 +20,7 @@
   (contains? breaks aa))
 
 (defn- stop-codon? [aa]
-  (= aa :.))
-
-(def my-codon-translation-matrix
-     {"ATG" :M "TAA" :. "TGA" :. "TAG" :. "GCT" :A "GCC" :A "GCA" :A "GCG" :A
-      "TTA" :L "TTG" :L "CTT" :L "CTC" :L "CTA" :L "CTG" :L "CGT" :R "CGC" :R
-      "CGA" :R "CGG" :R "AGA" :R "AGG" :R "AAA" :K "AAG" :K "AAT" :N "AAC" :N
-      "GAT" :D "GAC" :D "TTT" :F "TTC" :F "TGT" :C "TGC" :C "CCT" :P "CCC" :P
-      "CCA" :P "CCG" :P "CAA" :Q "CAG" :Q "TCT" :S "TCC" :S "TCA" :S "TCG" :S
-      "AGT" :S "AGC" :S "GAA" :E "GAG" :E "ACT" :T "ACC" :T "ACA" :T "ACG" :T
-      "GGT" :G "GGC" :G "GGA" :G "GGG" :G "TGG" :W "CAT" :H "CAC" :H "TAT" :Y
-      "TAC" :Y "ATT" :I "ATC" :I "ATA" :I "GTT" :V "GTC" :V "GTA" :V "GTG" :V})
-
-
-(def my-rna-codon-translation-matrix
-     {"AUG" :M "UAA" :. "UGA" :. "UAG" :. "GCU" :A "GCC" :A "GCA" :A "GCG" :A
-      "UUA" :L "UUG" :L "CUU" :L "CUC" :L "CUA" :L "CUG" :L "CGU" :R "CGC" :R
-      "CGA" :R "CGG" :R "AGA" :R "AGG" :R "AAA" :K "AAG" :K "AAU" :N "AAC" :N
-      "GAU" :D "GAC" :D "UUU" :F "UUC" :F "UGU" :C "UGC" :C "CCU" :P "CCC" :P
-      "CCA" :P "CCG" :P "CAA" :Q "CAG" :Q "UCU" :S "UCC" :S "UCA" :S "UCG" :S
-      "AGU" :S "AGC" :S "GAA" :E "GAG" :E "ACU" :T "ACC" :T "ACA" :T "ACG" :T
-      "GGU" :G "GGC" :G "GGA" :G "GGG" :G "UGG" :W "CAU" :H "CAC" :H "UAU" :Y
-      "UAC" :Y "AUU" :I "AUC" :I "AUA" :I "GUU" :V "GUC" :V "GUA" :V "GUG" :V})
+  (= aa STOP))
 
 (defn sequence-type
   "Based on sampling the first 100 monomers of the given biopolymer sequence,
@@ -78,10 +56,9 @@
                     3 1)
 
         to-aa (condp = sequence-type
-                  :dna my-codon-translation-matrix
-                  :rna my-rna-codon-translation-matrix
-                  :protein keyword
-                    )
+                  :dna standard-genetic-code
+                  :rna (to-rna-code standard-genetic-code)
+                  :protein identity)
 
         ;; Only if doing DNA
         ^String reverse-complement (reverse-complement primary-sequence)
@@ -100,8 +77,8 @@
                                                          %)))))
                                 (if (or (break? last-aa)
                                         (start? aa)
-                                        (= :M last-aa) ;; N-term Ms are often cleaved
-                                        (= :. last-aa))
+                                        (= "M" last-aa) ;; N-term Ms are often cleaved
+                                        (= STOP last-aa))
                                   (conj cs
                                         (condp = sequence-type
                                             :dna (dna-peptide-candidate aa
@@ -158,11 +135,11 @@
                                             (var-set candidates
                                                      (remove-breaks @candidates)))
 
-                                          (and (= :. aa) (break? last-aa))
+                                          (and (= STOP aa) (break? last-aa))
                                           ;; clear out all candidates, flushing nothing
                                           (var-set candidates [])
 
-                                          (= :. aa) ;; if it's just a stop, then copy all proper mass candidates out
+                                          (= STOP aa) ;; if it's just a stop, then copy all proper mass candidates out
                                           ;; begin anew with no candidates
 
                                           (do (swap! all-peptides add-filtered-candidates @candidates)
