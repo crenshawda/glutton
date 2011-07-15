@@ -20,3 +20,6 @@ classes/
 
 # lein-retest failure file
 .lein-failures
+
+# Marginalia docs
+docs/
