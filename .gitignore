@@ -17,3 +17,9 @@
 # Project lib and class compilation directories
 lib/
 classes/
+
+# lein-retest failure file
+.lein-failures
+
+# Marginalia docs
+docs/

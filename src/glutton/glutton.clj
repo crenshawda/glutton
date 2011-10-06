@@ -1,7 +1,12 @@
+;; glutton v0.2
+
 (ns glutton.glutton
-  ( :use (clojure.contrib [def :only [defnk]]
-                          [seq-utils :only [indexed]])
-         (glutton [peptide-record :only [extend-with initiate-peptide]])))
+  ( :use (clojure (set :only [superset?]))
+         (glutton [peptide :only [dna-peptide-candidate
+                                  extend-peptide finish-candidate
+                                  rna-peptide-candidate
+                                  protein-peptide-candidate]]
+                  (translate :only [reverse-complement standard-genetic-code to-rna-code STOP]))))
 
 (defn- above-threshold
   "Return only those peptides whose mass is greater than or equal to 'mass-threshold'"
@@ -17,70 +22,170 @@
   (contains? breaks aa))
 
 (defn- stop-codon? [aa]
-  (= aa :.))
+  (= aa STOP))
 
-(defn- process [candidates current-aa prev-aa loc {:keys [break-after start-with source digestion]}]
-  (lazy-cat (for [c candidates]
-              (let [c (extend-with c current-aa)]
-                (if (break? break-after current-aa)
-                  (update-in c [:breaks] inc) ; Should this be a protocol as well?
-                  c)))
-            (if (or (break? break-after prev-aa) ;after you cleave, you need to begin a new one
-                    (start? start-with current-aa) ;obviously
-                    (= :M prev-aa) ;N-terminal methionines often get removed                                         ; (TODO: does this happen for all organisms?)
-                    (stop-codon? prev-aa))
-              [(initiate-peptide current-aa (* 3 loc)
-                                 (if (break? break-after current-aa)
-                                   1
-                                   0)
-                                 source digestion)])))
+(defn sequence-type
+  "Based on sampling the first 100 monomers of the given biopolymer sequence,
+  determines if the sequence is DNA, RNA, or protein."
+  [^String sequence]
+  (let [dna-bases #{\A \C \G \T}
+        rna-bases #{\A \C \G \U}
+        amino-acids #{\A \R \N \D \C
+                      \E \Q \G \H \I
+                      \L \K \M \F \P
+                      \S \T \W \Y \V}
+        monomers (set (take 100 sequence))]
+    (condp superset? monomers
+      dna-bases :dna
+      rna-bases :rna
+      amino-acids :protein)))
 
-(defn- digest*
-  [[[loc [prev-aa current-aa]] & other-aas :as aas] candidates config]
-  (let [new-candidates (process candidates current-aa prev-aa loc config)
-        {:keys [missed-cleavages break-after mass-threshold]} config]
-    (if (seq other-aas)
-      (cond (break? break-after current-aa)  (lazy-cat (above-threshold mass-threshold new-candidates)
-                                                       (digest* other-aas
-                                                                (remove #(> (:breaks %)
-                                                                            missed-cleavages)
-                                                                        new-candidates)
-                                                                config))
-            (and (stop-codon? current-aa)
-                 (break? break-after prev-aa)) (lazy-cat [] (digest* other-aas [] config))
-            (stop-codon? current-aa) (lazy-cat (above-threshold mass-threshold new-candidates)
-                                               (digest* other-aas [] config))
+(defn digest
+  "Perform a synthetic trypsin digest of a sequence.
 
-            :default (recur other-aas new-candidates config))
-      (above-threshold mass-threshold new-candidates))))
+   If the sequence is DNA, it is translated to protein in all six reading frames before digestion.
+   If the sequence is RNA, it is translated to protein in all three reading frames before digestion.
+   If the sequence is protein, it is just digested.
 
-(defnk digest
-  "Perform a synthetic enzymatic digest of a peptide sequence.
+   * `sequence-id` is an identifier for the sequence.
+   * `sequence` is the actual biopolymer sequence being digested, as a string.  Standard single-letter
+   codes should be used
 
-   aas = sequence of amino acids, given as single-letter code keywords, e.g., [:G :L :Y :T: V].
+   Keyword parameters
 
-   Optional Keyword Parameters:
-   :missed-cleavages -> Maximum number of internal missed cleavage sites allowed for a candidate peptide.
-   Defaults to 2
-   :break-after      -> Amino acids that signal a break.  Candidate peptides will end with one of these
-   amino acids.  Defaults to [:K :R] (i.e., trypsin digestion).
-   :start-with       -> Amino acids that signal the start of a new candidate peptide.
-   Defaults to [:M].  Note that the start of the digested peptide sequence always begins a new candidate,
-   whether it is in this list or not.
-   :mass-threshold   -> All candidate peptides with mass lower than this should be removed.  Defaults to 500
-    daltons.
-   :source         -> Organism that the genome came from.  Defaults to unknown.
+   * `mass-threshold`: only peptides that have a mass greater than or equal to this (in Daltons) will
+     be returned.  Useful for ignoring peptides that are too small to be of interest.  Defaults to `500`.
+   * `missed-cleavages`: proteases don't cleave with 100% efficiency.  This parameter simulates this by
+     allowing a peptide to contain some number of internal cleavage sites.  Defaults to 2.
+   * `break-after`: a vector of single-letter amino acid codes after which a peptide should be cleaved.
+     Defaults to `[\"K\" \"R\"] for trypsin.
+   * `start-with`: a vector of single-letter amino acid codes at which a new peptide should be started.
+     Defaults to `[\"M\"]` (methionine).  The first amino acid of the (possibly translated) sequence will
+     begin a new peptide, whether it is in this vector or not.
 
-   Returns a lazy sequence of Peptides."
-  [aas :missed-cleavages 2 :break-after [:K :R] :start-with [:M] :mass-threshold 500 :source ""]
-  (let [break-after (set (conj break-after nil))
-        start-with (set start-with)
-        config {:missed-cleavages missed-cleavages
-                :break-after break-after
-                :start-with start-with
-                :mass-threshold mass-threshold
-                :source source
-                :digestion "glutton"}]
-    (digest* (indexed (partition 2 1 (cons nil aas)))
-             []
-             config)))
+  Returns a non-lazy sequence of peptides (see `glutton.peptide`)."
+  [sequence-id ^String primary-sequence & {:keys [mass-threshold
+                                                  missed-cleavages
+                                                  break-after
+                                                  start-with]
+                                           :or {mass-threshold 500
+                                                missed-cleavages 2
+                                                break-after ["K" "R"]
+                                                start-with ["M"]}}]
+  (let [all-peptides (atom [])
+
+        length (.length primary-sequence)
+
+        sequence-type (sequence-type primary-sequence)
+        _ (println "Sequence Type:" sequence-type)
+
+        step-size (if (contains? #{:dna :rna} sequence-type)
+                    3 1)
+
+        to-aa (condp = sequence-type
+                  :dna standard-genetic-code
+                  :rna (to-rna-code standard-genetic-code)
+                  :protein identity)
+
+        break? (set break-after)
+        start? (set start-with)
+
+        extend-candidates (fn [candidates start aa last-aa strand]
+                            (loop [i 0
+                                   cs candidates]
+                              (if (not= i (count candidates))
+                                (recur (inc i) (assoc cs
+                                                 i
+                                                 (-> (get cs i)
+                                                     (extend-peptide aa)
+                                                     (#(if (break? aa)
+                                                         (update-in % [:breaks] inc)
+                                                         %)))))
+                                (if (or (break? last-aa)
+                                        (start? aa)
+                                        (= "M" last-aa) ;; N-term Ms are often cleaved
+                                        (= STOP last-aa))
+                                  (conj cs
+                                        (condp = sequence-type
+                                            :dna (dna-peptide-candidate aa
+                                                                        strand
+                                                                        start
+                                                                        :monoisotopic-mass
+                                                                        sequence-id
+                                                                        length
+                                                                        (if (break? aa) 1 0))
+                                            :rna (rna-peptide-candidate aa
+                                                                        start
+                                                                        :monoisotopic-mass
+                                                                        sequence-id
+                                                                        (if (break? aa) 1 0))
+                                            :protein (protein-peptide-candidate aa
+                                                                                start
+                                                                                :monoisotopic-mass
+                                                                                sequence-id
+                                                                                (if (break? aa) 1 0))))
+                                  cs))))
+
+        above-threshold (fn [peptide-candidates]
+                          (filter #(>= (:mass %) mass-threshold)
+                                  peptide-candidates))
+
+        add-filtered-candidates (fn [all-peptides candidates]
+                                  (into all-peptides (map finish-candidate (above-threshold candidates))))
+
+        remove-breaks (fn [peptide-candidates]
+                        (vec (remove #(> (:breaks %) missed-cleavages)
+                                     peptide-candidates)))
+
+
+        ;; needs next-chunk, which is a function that depends on the sequence
+        the-main-event (fn [frame next-chunk strand]
+                         (time
+                          (do
+                            (with-local-vars [candidates []] ;; these are thread-local, non-interned vars
+                              (loop [position frame
+                                     last-aa :-]
+                                (if (not (>= position (- length step-size))) ;; TODO: check this math
+
+                                  ;; translate codon to amino acid; add that to list
+                                  (let [aa (to-aa (next-chunk position))]
+
+                                    ;; STRAND!! That's only for DNA!
+                                    ;; consider passing a map of extra information instead of individual params
+                                    (var-set candidates (extend-candidates @candidates position aa last-aa strand))
+                                    (cond (break? aa)
+                                          (do
+                                            ;; copy all candidate peptides that satisfy the mass filter to peptides collection
+                                            (swap! all-peptides add-filtered-candidates @candidates)
+                                            ;; Then, remove any candidates that have all their breaks
+                                            (var-set candidates
+                                                     (remove-breaks @candidates)))
+
+                                          (and (= STOP aa) (break? last-aa))
+                                          ;; clear out all candidates, flushing nothing
+                                          (var-set candidates [])
+
+                                          (= STOP aa) ;; if it's just a stop, then copy all proper mass candidates out
+                                          ;; begin anew with no candidates
+
+                                          (do (swap! all-peptides add-filtered-candidates @candidates)
+                                              (var-set candidates [])))
+                                    (recur (+ position step-size) aa))
+                                  (swap! all-peptides add-filtered-candidates @candidates)))))))]
+    (condp = sequence-type
+        :dna (doseq [strand [:+ :-]]
+               (let [nt (if (= strand :+) primary-sequence (reverse-complement primary-sequence))
+                     next-chunk (fn [position] (.substring nt position (+ position step-size)))]
+                 (doseq [frame [0 1 2]]
+                   (the-main-event frame next-chunk strand))))
+        :rna (doseq [strand [:+]]
+               (let [nt primary-sequence
+                     next-chunk (fn [position] (.substring nt position (+ position step-size)))]
+                 (doseq [frame [0 1 2]]
+                   (println "Digesting Frame" frame "of" sequence-id)
+                   (the-main-event frame next-chunk strand))))
+        :protein (let [nt primary-sequence
+                       next-chunk (fn [position] (.substring nt position (+ position step-size)))]
+                   (println "Digesting " sequence-id)
+                   (the-main-event 0 next-chunk nil)))
+    @all-peptides))
