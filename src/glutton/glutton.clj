@@ -1,3 +1,5 @@
+;; glutton v0.2
+
 (ns glutton.glutton
   ( :use (clojure (set :only [superset?]))
          (glutton [peptide :only [dna-peptide-candidate
